@@ -83,15 +83,16 @@ func (a *App) startInstanceUpdater() {
 
 func (a *App) reserveInstance() (*Instance, error) {
 	a.activeInstanceLock.Lock()
-	defer a.activeInstanceLock.Unlock()
 
-	if a.activeInstance == nil {
+	instance := a.activeInstance
+	if instance == nil {
 		return nil, ErrNoActiveInstances
 	}
+	instance.Serve()
 
-	a.activeInstance.Serve()
+	a.activeInstanceLock.Unlock()
 
-	return a.activeInstance, nil
+	return instance, nil
 }
 
 func (a *App) StartNewInstance() error {
