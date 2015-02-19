@@ -59,9 +59,11 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 	instance.processErr = instance.exec.Start()
 
 	go func() {
-		state, err := instance.exec.Process.Wait() // TODO: kill on timeout
-		instance.processErr = err
-		instance.processState = state
+		if instance.processErr != nil && instance.exec.Process != nil {
+			state, err := instance.exec.Process.Wait() // TODO: kill on timeout
+			instance.processErr = err
+			instance.processState = state
+		}
 	}()
 
 	return instance, nil
