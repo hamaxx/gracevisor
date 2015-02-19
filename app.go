@@ -14,12 +14,15 @@ import (
 var ErrNoActiveInstances = errors.New("No active instances")
 
 type AppConfig struct {
-	name         string
-	command      string
-	healthcheck  string
+	name        string
+	command     string
+	healthcheck string
+	stopSignal  int
+	timeout     int
+
+	internalHost string
 	externalHost string
-	stopSignal   int
-	timeout      int
+	externalPort uint32
 }
 
 type App struct {
@@ -32,15 +35,18 @@ type App struct {
 	requestInstance     map[*http.Request]*Instance
 	requestInstanceLock sync.Mutex
 
-	rp *httputil.ReverseProxy
+	rp       *httputil.ReverseProxy
+	portPool *PortPool
 }
 
-func NewApp(config *AppConfig) *App {
+func NewApp(config *AppConfig, portPool *PortPool) *App {
 	app := &App{
 		config: config,
 
 		instances:       make([]*Instance, 0, 3),
 		requestInstance: make(map[*http.Request]*Instance, 100),
+
+		portPool: portPool,
 	}
 
 	app.rp = &httputil.ReverseProxy{Director: app.reverseProxyDirector}
@@ -56,11 +62,10 @@ func (a *App) startInstanceUpdater() {
 	go func() {
 		for {
 			for _, instance := range a.instances {
-				status := instance.UpdateStatus(a)
-				if instance != a.activeInstance && status == InstanceStatusServing {
-					currentActive := a.activeInstance
-
+				status := instance.UpdateStatus()
+				if status == InstanceStatusServing && instance != a.activeInstance {
 					a.activeInstanceLock.Lock()
+					currentActive := a.activeInstance
 					a.activeInstance = instance
 					a.activeInstanceLock.Unlock()
 
@@ -83,7 +88,7 @@ func (a *App) reserveInstance(req *http.Request) (*Instance, error) {
 		return nil, ErrNoActiveInstances
 	}
 
-	a.activeInstance.serve()
+	a.activeInstance.Serve()
 
 	a.requestInstanceLock.Lock()
 	a.requestInstance[req] = a.activeInstance
@@ -116,14 +121,20 @@ func (a *App) reverseProxyDirector(req *http.Request) {
 	req.Header.Add("X-Real-IP", host)
 }
 
-func (a *App) StartNewInstance() {
+func (a *App) StartNewInstance() error {
 	for _, instance := range a.instances {
 		if instance.Status() == InstanceStatusStarting {
 			instance.Stop()
 		}
 	}
 
-	a.instances = append(a.instances, NewInstance(a))
+	newInstance, err := NewInstance(a)
+	if err != nil {
+		return err
+	}
+
+	a.instances = append(a.instances, newInstance)
+	return nil
 }
 
 func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -144,12 +155,16 @@ func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	a.rp.ServeHTTP(rw, req)
 }
 
+func (a *App) Hostname() string {
+	return fmt.Sprintf("%s:%d", a.config.externalHost, a.config.externalPort)
+}
+
 func (a *App) ListenAndServe() {
-	http.ListenAndServe(a.config.externalHost, a)
+	http.ListenAndServe(a.Hostname(), a)
 }
 
 func (a *App) Report() {
-	fmt.Printf("[%s]\n", a.config.name)
+	fmt.Printf("[%s/%s]\n", a.config.name, a.Hostname())
 	for _, instance := range a.instances {
 		if instance == a.activeInstance {
 			fmt.Print(" * ")
@@ -159,16 +174,17 @@ func (a *App) Report() {
 		fmt.Printf("%s ", instance.Hostname())
 		switch instance.Status() {
 		case InstanceStatusServing:
-			fmt.Print("serving")
+			fmt.Print("serving ")
 		case InstanceStatusStarting:
 			fmt.Print("starting")
 		case InstanceStatusStopping:
 			fmt.Print("stopping")
 		case InstanceStatusStopped:
-			fmt.Print("stopped")
+			fmt.Print("stopped ")
 		case InstanceStatusFailed:
-			fmt.Print("failed")
+			fmt.Print("failed  ")
 		}
+		fmt.Printf(" %s", instance.lastChange.String())
 		fmt.Println()
 	}
 }

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
 	"sync"
+	"time"
 )
 
 const (
@@ -14,24 +16,34 @@ const (
 )
 
 type Instance struct {
-	hostname string
-	status   int
-	exec     *exec.Cmd
-	connWg   *sync.WaitGroup
+	app *App
+
+	internalHost string
+	internalPort uint32
+	status       int
+	exec         *exec.Cmd
+	connWg       *sync.WaitGroup
+	lastChange   time.Time
 }
 
-func NewInstance(app *App) *Instance {
-	newHostname := "localhost:8001"
+func NewInstance(app *App) (*Instance, error) {
+	port, err := app.portPool.ReserveNewPort()
+	if err != nil {
+		return nil, err
+	}
 
 	instance := &Instance{
-		hostname: newHostname,
-		status:   InstanceStatusStarting,
-		exec:     exec.Command(app.config.command),
-		connWg:   &sync.WaitGroup{},
+		internalHost: app.config.internalHost,
+		internalPort: port,
+		app:          app,
+		status:       InstanceStatusStarting,
+		exec:         exec.Command(app.config.command),
+		connWg:       &sync.WaitGroup{},
+		lastChange:   time.Now(),
 	}
 	instance.exec.Start()
 
-	return instance
+	return instance, nil
 }
 
 func (i *Instance) Status() int {
@@ -39,6 +51,7 @@ func (i *Instance) Status() int {
 }
 func (i *Instance) Stop() {
 	i.status = InstanceStatusStopping
+	i.lastChange = time.Now()
 	go func() {
 		i.connWg.Wait()
 		// TODO stop signal
@@ -46,14 +59,16 @@ func (i *Instance) Stop() {
 
 }
 func (i *Instance) Kill() {
+	i.lastChange = time.Now()
 	// TODO
 }
 
 func (i *Instance) Hostname() string {
-	return i.hostname
+	hostPort := fmt.Sprintf("%s:%d", i.internalHost, i.internalPort)
+	return hostPort
 }
 
-func (i *Instance) serve() {
+func (i *Instance) Serve() {
 	i.connWg.Add(1)
 }
 
@@ -61,8 +76,11 @@ func (i *Instance) Done() {
 	i.connWg.Done()
 }
 
-func (i *Instance) UpdateStatus(app *App) int {
+func (i *Instance) UpdateStatus() int {
 	// TODO
-	i.status = InstanceStatusServing
-	return InstanceStatusServing
+	if i.status == InstanceStatusStarting {
+		i.status = InstanceStatusServing
+		i.lastChange = time.Now()
+	}
+	return i.status
 }
