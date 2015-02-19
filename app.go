@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -32,24 +33,22 @@ type App struct {
 	activeInstance     *Instance
 	activeInstanceLock sync.Mutex
 
-	requestInstance     map[*http.Request]*Instance
-	requestInstanceLock sync.Mutex
-
 	rp       *httputil.ReverseProxy
 	portPool *PortPool
+
+	instanceId uint32
 }
 
 func NewApp(config *AppConfig, portPool *PortPool) *App {
 	app := &App{
 		config: config,
 
-		instances:       make([]*Instance, 0, 3),
-		requestInstance: make(map[*http.Request]*Instance, 100),
+		instances: make([]*Instance, 0, 3),
 
 		portPool: portPool,
 	}
 
-	app.rp = &httputil.ReverseProxy{Director: app.reverseProxyDirector}
+	app.rp = &httputil.ReverseProxy{Director: func(req *http.Request) {}}
 
 	app.startInstanceUpdater()
 
@@ -72,6 +71,8 @@ func (a *App) startInstanceUpdater() {
 					if currentActive != nil {
 						currentActive.Stop()
 					}
+				} else if status == InstanceStatusExited {
+					a.activeInstance = nil
 				}
 			}
 			a.Report()
@@ -80,7 +81,7 @@ func (a *App) startInstanceUpdater() {
 	}()
 }
 
-func (a *App) reserveInstance(req *http.Request) (*Instance, error) {
+func (a *App) reserveInstance() (*Instance, error) {
 	a.activeInstanceLock.Lock()
 	defer a.activeInstanceLock.Unlock()
 
@@ -90,45 +91,17 @@ func (a *App) reserveInstance(req *http.Request) (*Instance, error) {
 
 	a.activeInstance.Serve()
 
-	a.requestInstanceLock.Lock()
-	a.requestInstance[req] = a.activeInstance
-	a.requestInstanceLock.Unlock()
-
 	return a.activeInstance, nil
-}
-
-func (a *App) releaseInstance(req *http.Request) {
-	a.requestInstanceLock.Lock()
-	defer a.requestInstanceLock.Unlock()
-
-	instance, ok := a.requestInstance[req]
-	if ok {
-		instance.Done()
-		delete(a.requestInstance, req)
-	}
-}
-
-func (a *App) reverseProxyDirector(req *http.Request) {
-	instance, err := a.reserveInstance(req)
-	if err != nil {
-		panic(err)
-	}
-
-	req.URL.Scheme = "http"
-	req.URL.Host = instance.Hostname()
-
-	host, _, _ := net.SplitHostPort(req.RemoteAddr) //TODO parse real real ip, add fwd for
-	req.Header.Add("X-Real-IP", host)
 }
 
 func (a *App) StartNewInstance() error {
 	for _, instance := range a.instances {
-		if instance.Status() == InstanceStatusStarting {
+		if instance.status == InstanceStatusStarting {
 			instance.Stop()
 		}
 	}
 
-	newInstance, err := NewInstance(a)
+	newInstance, err := NewInstance(a, atomic.AddUint32(&a.instanceId, 1))
 	if err != nil {
 		return err
 	}
@@ -138,6 +111,8 @@ func (a *App) StartNewInstance() error {
 }
 
 func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	instance, err := a.reserveInstance()
+
 	defer func() {
 		if err := recover(); err != nil {
 			if err == ErrNoActiveInstances {
@@ -149,8 +124,20 @@ func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		a.releaseInstance(req)
+		if instance != nil {
+			instance.Done()
+		}
 	}()
+
+	if err != nil {
+		panic(err)
+	}
+
+	req.URL.Scheme = "http"
+	req.URL.Host = instance.Hostname()
+
+	host, _, _ := net.SplitHostPort(req.RemoteAddr) //TODO parse real real ip, add fwd for
+	req.Header.Add("X-Real-IP", host)
 
 	a.rp.ServeHTTP(rw, req)
 }
@@ -171,8 +158,8 @@ func (a *App) Report() {
 		} else {
 			fmt.Print("   ")
 		}
-		fmt.Printf("%s ", instance.Hostname())
-		switch instance.Status() {
+		fmt.Printf("%d/%s ", instance.id, instance.Hostname())
+		switch instance.status {
 		case InstanceStatusServing:
 			fmt.Print("serving ")
 		case InstanceStatusStarting:
@@ -183,8 +170,10 @@ func (a *App) Report() {
 			fmt.Print("stopped ")
 		case InstanceStatusFailed:
 			fmt.Print("failed  ")
+		case InstanceStatusExited:
+			fmt.Print("exited  ")
 		}
-		fmt.Printf(" %s", instance.lastChange.String())
+		fmt.Printf(" %s", time.Since(instance.lastChange)/time.Second*time.Second)
 		fmt.Println()
 	}
 }

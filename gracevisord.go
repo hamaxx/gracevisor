@@ -5,7 +5,7 @@ import "time"
 func main() {
 	app := NewApp(&AppConfig{
 		name:         "test",
-		command:      "./b1 --port {port}",
+		command:      "./demoapp/demoapp --port={port}",
 		healthcheck:  "/HealthCheck",
 		externalHost: "localhost",
 		externalPort: 8080,
