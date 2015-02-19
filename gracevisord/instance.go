@@ -59,7 +59,7 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 	instance.processErr = instance.exec.Start()
 
 	go func() {
-		if instance.processErr != nil && instance.exec.Process != nil {
+		if instance.exec.Process != nil {
 			state, err := instance.exec.Process.Wait() // TODO: kill on timeout
 			instance.processErr = err
 			instance.processState = state
@@ -153,11 +153,17 @@ func (i *Instance) checkProcessRunningStatus() int {
 
 func (i *Instance) UpdateStatus() int {
 	if i.status == InstanceStatusStarting {
-		i.status = i.checkProcessStartupStatus()
-		i.lastChange = time.Now()
+		status := i.checkProcessStartupStatus()
+		if status != i.status {
+			i.status = status
+			i.lastChange = time.Now()
+		}
 	} else if i.status == InstanceStatusStopping {
-		i.status = i.checkProcessStoppingStatus()
-		i.lastChange = time.Now()
+		status := i.checkProcessStoppingStatus()
+		if status != i.status {
+			i.status = status
+			i.lastChange = time.Now()
+		}
 	} else if i.status == InstanceStatusServing {
 		status := i.checkProcessRunningStatus()
 		if status != i.status {
