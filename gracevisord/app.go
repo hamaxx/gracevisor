@@ -36,16 +36,17 @@ type App struct {
 	rp       *httputil.ReverseProxy
 	portPool *PortPool
 
+	externalHostPort string
+
 	instanceId uint32
 }
 
 func NewApp(config *AppConfig, portPool *PortPool) *App {
 	app := &App{
-		config: config,
-
-		instances: make([]*Instance, 0, 3),
-
-		portPool: portPool,
+		config:           config,
+		instances:        make([]*Instance, 0, 3),
+		portPool:         portPool,
+		externalHostPort: fmt.Sprintf("%s:%d", config.externalHost, config.externalPort),
 	}
 
 	app.rp = &httputil.ReverseProxy{Director: func(req *http.Request) {}}
@@ -141,7 +142,7 @@ func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	req.URL.Scheme = "http"
-	req.URL.Host = instance.Hostname()
+	req.URL.Host = instance.internalHostPort
 
 	host, _, _ := net.SplitHostPort(req.RemoteAddr) //TODO parse real real ip, add fwd for
 	req.Header.Add("X-Real-IP", host)
@@ -149,23 +150,27 @@ func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	a.rp.ServeHTTP(rw, req)
 }
 
-func (a *App) Hostname() string {
-	return fmt.Sprintf("%s:%d", a.config.externalHost, a.config.externalPort)
-}
-
 func (a *App) ListenAndServe() {
-	http.ListenAndServe(a.Hostname(), a)
+	http.ListenAndServe(a.externalHostPort, a)
 }
 
 func (a *App) Report() {
-	fmt.Printf("[%s/%s]\n", a.config.name, a.Hostname())
-	for _, instance := range a.instances {
+	displayN := 3
+
+	l := len(a.instances)
+	from := 0
+	if l > displayN {
+		from = l - displayN
+	}
+
+	fmt.Printf("[%s/%s]\n", a.config.name, a.externalHostPort)
+	for _, instance := range a.instances[from:l] {
 		if instance == a.activeInstance {
 			fmt.Print(" * ")
 		} else {
 			fmt.Print("   ")
 		}
-		fmt.Printf("%d/%s ", instance.id, instance.Hostname())
+		fmt.Printf("%d/%s ", instance.id, instance.internalHostPort)
 		switch instance.status {
 		case InstanceStatusServing:
 			fmt.Print("serving ")

@@ -25,10 +25,11 @@ type Instance struct {
 	app *App
 	id  uint32
 
-	internalHost string
-	internalPort uint32
-	status       int
-	lastChange   time.Time
+	internalHost     string
+	internalPort     uint32
+	internalHostPort string
+	status           int
+	lastChange       time.Time
 
 	connWg    *sync.WaitGroup
 	connCount int32
@@ -47,20 +48,21 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 	cmd, attrs := parseCommand(app.config.command, port)
 
 	instance := &Instance{
-		id:           id,
-		app:          app,
-		internalHost: app.config.internalHost,
-		internalPort: port,
-		status:       InstanceStatusStarting,
-		exec:         exec.Command(cmd, attrs...),
-		connWg:       &sync.WaitGroup{},
-		lastChange:   time.Now(),
+		id:               id,
+		app:              app,
+		internalHost:     app.config.internalHost,
+		internalPort:     port,
+		internalHostPort: fmt.Sprintf("%s:%d", app.config.internalHost, port),
+		status:           InstanceStatusStarting,
+		exec:             exec.Command(cmd, attrs...),
+		connWg:           &sync.WaitGroup{},
+		lastChange:       time.Now(),
 	}
 	instance.processErr = instance.exec.Start()
 
 	go func() {
 		if instance.exec.Process != nil {
-			state, err := instance.exec.Process.Wait() // TODO: kill on timeout
+			state, err := instance.exec.Process.Wait()
 			instance.processErr = err
 			instance.processState = state
 		}
@@ -81,7 +83,7 @@ func (i *Instance) Stop() {
 	go func() {
 		i.connWg.Wait()
 		if i.exec.Process != nil {
-			i.exec.Process.Signal(syscall.SIGTERM) // TODO: configurable
+			i.exec.Process.Signal(syscall.SIGTERM) // TODO: configurable signal, kill on timeout
 		}
 	}()
 
@@ -91,11 +93,6 @@ func (i *Instance) Kill() {
 	if i.exec.Process != nil {
 		i.processErr = i.exec.Process.Kill()
 	}
-}
-
-func (i *Instance) Hostname() string {
-	hostPort := fmt.Sprintf("%s:%d", i.internalHost, i.internalPort)
-	return hostPort
 }
 
 func (i *Instance) Serve() {
