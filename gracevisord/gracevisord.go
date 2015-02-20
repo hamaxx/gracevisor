@@ -16,6 +16,8 @@ func main() {
 
 	go func() {
 		app.StartNewInstance()
+		app.StartNewInstance()
+		app.StartNewInstance()
 		time.Sleep(time.Second * time.Duration(2))
 		app.StartNewInstance()
 		time.Sleep(time.Second * time.Duration(2))

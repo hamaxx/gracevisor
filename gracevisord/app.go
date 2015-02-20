@@ -60,6 +60,7 @@ func (a *App) startInstanceUpdater() {
 
 	go func() {
 		for {
+			starting := false
 			for _, instance := range a.instances {
 				status := instance.UpdateStatus()
 				if status == InstanceStatusServing && instance != a.activeInstance {
@@ -71,10 +72,21 @@ func (a *App) startInstanceUpdater() {
 					if currentActive != nil {
 						currentActive.Stop()
 					}
-				} else if status == InstanceStatusExited {
+				} else if status == InstanceStatusExited && instance == a.activeInstance {
 					a.activeInstance = nil
+				} else if status == InstanceStatusStarting {
+					starting = true
 				}
 			}
+
+			if a.activeInstance == nil && !starting {
+				// TODO retry count
+				err := a.StartNewInstance()
+				if err != nil {
+					log.Print(err)
+				}
+			}
+
 			a.Report()
 			<-ticker.C
 		}
@@ -96,12 +108,6 @@ func (a *App) reserveInstance() (*Instance, error) {
 }
 
 func (a *App) StartNewInstance() error {
-	for _, instance := range a.instances {
-		if instance.status == InstanceStatusStarting {
-			instance.Stop()
-		}
-	}
-
 	newInstance, err := NewInstance(a, atomic.AddUint32(&a.instanceId, 1))
 	if err != nil {
 		return err
