@@ -26,13 +26,19 @@ type AppConfig struct {
 	ExternalPort uint32 `yaml:"external_port"`
 }
 
+type RpcConfig struct {
+	Host string `yaml:"host"`
+	Port uint32 `yaml:"port"`
+}
+
 type Config struct {
-	Port *InternalPorts `yaml:"port"`
-	Apps []*AppConfig   `yaml:"apps"`
+	PortRange *InternalPorts `yaml:"port_range"`
+	Apps      []*AppConfig   `yaml:"apps"`
+	Rpc       *RpcConfig     `yaml:"rpc"`
 }
 
 func ParseConfing(configPath string) (*Config, error) {
-	// TODO: validate params, default values
+	// TODO: validate params, default values, conf.d
 	data, err := ioutil.ReadFile(path.Join(configPath, configFile))
 	if err != nil {
 		return nil, err

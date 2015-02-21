@@ -1,6 +1,9 @@
-port:
+port_range:
     from: 10000
     to: 11000
+rpc:
+    host: localhost
+    port: 9001
 apps:
     - name: demo
       command: ../demoapp/demoapp --port={port}

@@ -76,7 +76,6 @@ func (a *App) startInstanceUpdater() {
 				}
 			}
 
-			a.Report()
 			<-ticker.C
 		}
 	}()
@@ -142,7 +141,9 @@ func (a *App) ListenAndServe() {
 	http.ListenAndServe(a.externalHostPort, a)
 }
 
-func (a *App) Report() {
+func (a *App) Report() string {
+	report := ""
+
 	displayN := 3
 
 	l := len(a.instances)
@@ -151,32 +152,33 @@ func (a *App) Report() {
 		from = l - displayN
 	}
 
-	fmt.Printf("[%s/%s]\n", a.config.Name, a.externalHostPort)
+	report += fmt.Sprintf("[%s/%s]\n", a.config.Name, a.externalHostPort)
 	for _, instance := range a.instances[from:l] {
 		if instance == a.activeInstance {
-			fmt.Print(" * ")
+			report += fmt.Sprint(" * ")
 		} else {
-			fmt.Print("   ")
+			report += fmt.Sprint("   ")
 		}
-		fmt.Printf("%d/%s ", instance.id, instance.internalHostPort)
+		report += fmt.Sprintf("%d/%s ", instance.id, instance.internalHostPort)
 		switch instance.status {
 		case InstanceStatusServing:
-			fmt.Print("serving ")
+			report += fmt.Sprint("serving ")
 		case InstanceStatusStarting:
-			fmt.Print("starting")
+			report += fmt.Sprint("starting")
 		case InstanceStatusStopping:
-			fmt.Print("stopping")
+			report += fmt.Sprint("stopping")
 		case InstanceStatusStopped:
-			fmt.Print("stopped ")
+			report += fmt.Sprint("stopped ")
 		case InstanceStatusFailed:
-			fmt.Print("failed  ")
+			report += fmt.Sprint("failed  ")
 		case InstanceStatusExited:
-			fmt.Print("exited  ")
+			report += fmt.Sprint("exited  ")
 		}
-		fmt.Printf(" %s", time.Since(instance.lastChange)/time.Second*time.Second)
+		report += fmt.Sprintf(" %s", time.Since(instance.lastChange)/time.Second*time.Second)
 		if instance.processErr != nil {
-			fmt.Printf(" %q", instance.processErr)
+			report += fmt.Sprintf(" %q", instance.processErr)
 		}
-		fmt.Println()
+		report += fmt.Sprintln()
 	}
+	return report
 }

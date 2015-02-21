@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
 	"sync"
 )
 
@@ -19,18 +20,25 @@ func main() {
 		return
 	}
 
+	portPool := NewPortPool(config.PortRange.From, config.PortRange.To)
+	runningApps := map[string]*App{}
+
 	appWg := sync.WaitGroup{}
-
-	portPool := NewPortPool(config.Port.From, config.Port.To)
-
 	for _, appConfig := range config.Apps {
 		appWg.Add(1)
-		go func(appConfig *AppConfig) {
-			app := NewApp(appConfig, portPool)
+		app := NewApp(appConfig, portPool)
+		runningApps[app.config.Name] = app
+		go func() {
 			app.ListenAndServe()
 			appWg.Done()
-		}(appConfig)
+		}()
 	}
+
+	rpcListener, err := NewRpcServer(runningApps, config.Rpc)
+	if err != nil {
+		log.Fatal(err)
+	}
+	http.Serve(rpcListener, nil)
 
 	appWg.Wait()
 
