@@ -14,26 +14,6 @@ const (
 	defaultPort = 9001
 )
 
-func mainT() {
-	client, err := rpc.DialHTTP("tcp", "localhost:1234")
-	if err != nil {
-		log.Fatal("dialing:", err)
-	}
-
-	var reply string
-	err = client.Call("Rpc.Restart", "demo1", &reply)
-	if err != nil {
-		log.Fatal("Restart error:", err)
-	}
-	fmt.Println("Restart in progress")
-
-	err = client.Call("Rpc.Status", "", &reply)
-	if err != nil {
-		log.Fatal("Status error:", err)
-	}
-	fmt.Println(reply)
-}
-
 func basicRpcCall(c *cli.Context, method string, args interface{}) {
 	client, err := rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d", c.GlobalString("host"), c.GlobalInt("port")))
 	if err != nil {
