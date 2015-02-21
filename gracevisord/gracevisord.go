@@ -1,28 +1,37 @@
 package main
 
-import "time"
+import (
+	"flag"
+	"log"
+	"sync"
+)
+
+var defaultConfigDir = "/etc/gracevisor/"
+var configPath = flag.String("conf", defaultConfigDir, "path to config dir")
 
 func main() {
-	app := NewApp(&AppConfig{
-		name:         "test",
-		command:      "../demoapp/demoapp --port={port}",
-		healthcheck:  "/HealthCheck",
-		externalHost: "localhost",
-		externalPort: 8080,
-		internalHost: "localhost",
-	},
-		NewPortPool(10000, 11000),
-	)
+	flag.Parse()
 
-	go func() {
-		app.StartNewInstance()
-		app.StartNewInstance()
-		app.StartNewInstance()
-		time.Sleep(time.Second * time.Duration(2))
-		app.StartNewInstance()
-		time.Sleep(time.Second * time.Duration(2))
-		app.StartNewInstance()
-	}()
+	config, err := ParseConfing(*configPath)
 
-	app.ListenAndServe()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	appWg := sync.WaitGroup{}
+
+	portPool := NewPortPool(config.Port.From, config.Port.To)
+
+	for _, appConfig := range config.Apps {
+		appWg.Add(1)
+		go func(appConfig *AppConfig) {
+			app := NewApp(appConfig, portPool)
+			app.ListenAndServe()
+			appWg.Done()
+		}(appConfig)
+	}
+
+	appWg.Wait()
+
 }

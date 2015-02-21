@@ -1,0 +1,16 @@
+port:
+    from: 10000
+    to: 11000
+apps:
+    - name: demo
+      command: ../demoapp/demoapp --port={port}
+      healthcheck: /HealthCheck
+      external_host: localhost
+      external_port: 8080
+      internal_host: localhost
+    - name: demo1
+      command: ../demoapp/demoapp --port={port}
+      healthcheck: /HealthCheck
+      external_host: localhost
+      external_port: 8081
+      internal_host: localhost

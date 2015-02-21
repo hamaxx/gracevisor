@@ -14,18 +14,6 @@ import (
 
 var ErrNoActiveInstances = errors.New("No active instances")
 
-type AppConfig struct {
-	name        string
-	command     string
-	healthcheck string
-	stopSignal  int
-	timeout     int
-
-	internalHost string
-	externalHost string
-	externalPort uint32
-}
-
 type App struct {
 	config *AppConfig
 
@@ -46,7 +34,7 @@ func NewApp(config *AppConfig, portPool *PortPool) *App {
 		config:           config,
 		instances:        make([]*Instance, 0, 3),
 		portPool:         portPool,
-		externalHostPort: fmt.Sprintf("%s:%d", config.externalHost, config.externalPort),
+		externalHostPort: fmt.Sprintf("%s:%d", config.ExternalHost, config.ExternalPort),
 	}
 
 	app.rp = &httputil.ReverseProxy{Director: func(req *http.Request) {}}
@@ -163,7 +151,7 @@ func (a *App) Report() {
 		from = l - displayN
 	}
 
-	fmt.Printf("[%s/%s]\n", a.config.name, a.externalHostPort)
+	fmt.Printf("[%s/%s]\n", a.config.Name, a.externalHostPort)
 	for _, instance := range a.instances[from:l] {
 		if instance == a.activeInstance {
 			fmt.Print(" * ")

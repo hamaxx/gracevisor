@@ -45,14 +45,14 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		return nil, err
 	}
 
-	cmd, attrs := parseCommand(app.config.command, port)
+	cmd, attrs := parseCommand(app.config.Command, port)
 
 	instance := &Instance{
 		id:               id,
 		app:              app,
-		internalHost:     app.config.internalHost,
+		internalHost:     app.config.InternalHost,
 		internalPort:     port,
-		internalHostPort: fmt.Sprintf("%s:%d", app.config.internalHost, port),
+		internalHostPort: fmt.Sprintf("%s:%d", app.config.InternalHost, port),
 		status:           InstanceStatusStarting,
 		exec:             exec.Command(cmd, attrs...),
 		connWg:           &sync.WaitGroup{},
@@ -106,7 +106,7 @@ func (i *Instance) Done() {
 }
 
 func (i *Instance) healthCheck() int {
-	if i.app.config.healthcheck == "" {
+	if i.app.config.Healthcheck == "" {
 		return InstanceStatusServing
 	}
 	return InstanceStatusServing // TODO
