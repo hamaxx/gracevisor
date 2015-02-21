@@ -174,6 +174,9 @@ func (a *App) Report() {
 			fmt.Print("exited  ")
 		}
 		fmt.Printf(" %s", time.Since(instance.lastChange)/time.Second*time.Second)
+		if instance.processErr != nil {
+			fmt.Printf(" %q", instance.processErr)
+		}
 		fmt.Println()
 	}
 }
