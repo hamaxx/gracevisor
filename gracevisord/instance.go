@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 )
 
@@ -27,6 +27,10 @@ const (
 
 const (
 	HealthCheckTimeout = 1
+)
+
+var (
+	ErrInvalidStopSignal = errors.New("Invalid stop signal")
 )
 
 type Instance struct {
@@ -91,11 +95,17 @@ func (i *Instance) Stop() {
 	go func() {
 		i.connWg.Wait()
 		if i.exec.Process != nil {
-			i.exec.Process.Signal(syscall.SIGTERM) // TODO: configurable signal, kill on timeout
+			signal, ok := Signals[i.app.config.StopSignal]
+			if !ok {
+				log.Print(ErrInvalidStopSignal)
+				return
+			}
+			i.exec.Process.Signal(signal)
 		}
 	}()
 
 }
+
 func (i *Instance) Kill() {
 	i.status = InstanceStatusStopping
 	i.lastChange = time.Now()

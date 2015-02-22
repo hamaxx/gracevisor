@@ -43,7 +43,6 @@ Build and run gracevisorctl.
 - apps management: reload config, remove, add
 - config: validation, default values, auto discover, conf.d
 - logging
-- configurable stop signal
 - detailed instance status
 - daemonize supervisord
 - make file

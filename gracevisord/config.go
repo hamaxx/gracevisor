@@ -19,10 +19,10 @@ type AppConfig struct {
 	Command     string `yaml:"command"`
 	HealthCheck string `yaml:"healthcheck"`
 
-	StopSignal   int `yaml:"stop_signal"`
-	MaxRetries   int `yaml:"max_retries"`
-	StartTimeout int `yaml:"start_timeout"`
-	StopTimeout  int `yaml:"stop_timeout"`
+	StopSignal   string `yaml:"stop_signal"`
+	MaxRetries   int    `yaml:"max_retries"`
+	StartTimeout int    `yaml:"start_timeout"`
+	StopTimeout  int    `yaml:"stop_timeout"`
 
 	InternalHost string `yaml:"internal_host"`
 	ExternalHost string `yaml:"external_host"`

@@ -11,6 +11,7 @@ apps:
       external_host: localhost
       external_port: 8080
       internal_host: localhost
+      stop_signal: TERM
       max_retries: 5
       start_timeout: 30
       stop_timeout: 30
@@ -20,6 +21,7 @@ apps:
       external_host: localhost
       external_port: 8081
       internal_host: localhost
+      stop_signal: QUIT
       max_retries: 5
       start_timeout: 30
       stop_timeout: 30
