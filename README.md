@@ -31,7 +31,7 @@ Build gracevisord package. Run it with config path.
     cd gracevisord
     go build
     ./gracevisord --conf ../conf
-  
+
 Build and run gracevisorctl.
 
     cd gracevisorctl
@@ -40,11 +40,9 @@ Build and run gracevisorctl.
 
 ## TODO
 
-- commands: stop, start, kill
 - apps management: reload config, remove, add
 - config: validation, default values, auto discover, conf.d
 - logging
-- timeouts for start and stop
 - configurable stop signal
 - healthcheck support
 - detailed instance status

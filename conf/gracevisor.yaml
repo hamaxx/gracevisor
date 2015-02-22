@@ -11,9 +11,11 @@ apps:
       external_host: localhost
       external_port: 8080
       internal_host: localhost
+      max_retries: 5
     - name: demo1
       command: ../demoapp/demoapp --port={port}
       healthcheck: /HealthCheck
       external_host: localhost
       external_port: 8081
       internal_host: localhost
+      max_retries: 5

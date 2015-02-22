@@ -52,21 +52,23 @@ func NewApp(config *AppConfig, portPool *PortPool) *App {
 func (a *App) startInstanceUpdater() {
 	ticker := time.NewTicker(time.Second)
 
+	restartCount := 0
+
 	go func() {
 		for {
-			restart := false
+			lastStatus := -1
+
 			for _, instance := range a.instances {
 				status := instance.UpdateStatus()
+				lastStatus = status
 
 				if instance == a.activeInstance {
 					if status != InstanceStatusServing {
 						a.activeInstance = nil
 					}
-					if status == InstanceStatusExited || status == InstanceStatusFailed {
-						restart = true
-					}
 				} else {
 					if status == InstanceStatusServing {
+						restartCount = 0
 						a.activeInstanceLock.Lock()
 						currentActive := a.activeInstance
 						a.activeInstance = instance
@@ -79,11 +81,13 @@ func (a *App) startInstanceUpdater() {
 				}
 			}
 
-			if restart {
-				// TODO retry count
-				err := a.StartNewInstance()
-				if err != nil {
-					log.Print(err)
+			if lastStatus == InstanceStatusExited || lastStatus == InstanceStatusFailed || lastStatus == InstanceStatusTimedOut {
+				if restartCount < a.config.MaxRetries {
+					restartCount++
+					err := a.StartNewInstance()
+					if err != nil {
+						log.Print(err)
+					}
 				}
 			}
 
@@ -204,10 +208,14 @@ func (a *App) Report(displayN int) string {
 			writeColumn("stopping")
 		case InstanceStatusStopped:
 			writeColumn("stopped")
+		case InstanceStatusKilled:
+			writeColumn("killed")
 		case InstanceStatusFailed:
 			writeColumn("failed")
 		case InstanceStatusExited:
 			writeColumn("exited")
+		case InstanceStatusTimedOut:
+			writeColumn("timed out")
 		}
 		writeColumn("%s", time.Since(instance.lastChange)/time.Second*time.Second)
 		if instance.processErr != nil {

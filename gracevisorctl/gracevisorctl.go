@@ -34,6 +34,8 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "gracevisorctl"
 	app.Usage = "Manage gracevisord"
+	app.Email = "jure@hamsworld.net"
+	app.Version = "0.0.1"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "host",

@@ -17,8 +17,10 @@ const (
 	InstanceStatusStarting
 	InstanceStatusStopping
 	InstanceStatusStopped
+	InstanceStatusKilled
 	InstanceStatusExited
 	InstanceStatusFailed
+	InstanceStatusTimedOut
 )
 
 type Instance struct {
@@ -114,10 +116,18 @@ func (i *Instance) healthCheck() int {
 }
 
 func (i *Instance) checkProcessStartupStatus() int {
-	if i.processErr != nil {
+	if i.processExitState != nil || i.processErr != nil {
 		log.Print(i.processErr)
 		return InstanceStatusFailed
 	}
+
+	if i.app.config.StopTimeout > 0 && time.Since(i.lastChange) > i.app.config.StartTimeout {
+		if i.exec.Process != nil {
+			i.processErr = i.exec.Process.Kill()
+		}
+		return InstanceStatusTimedOut
+	}
+
 	if i.exec.Process == nil {
 		return InstanceStatusStarting
 	}
@@ -131,7 +141,15 @@ func (i *Instance) checkProcessStoppingStatus() int {
 		return InstanceStatusExited
 	}
 	if i.processExitState != nil {
+		if s, ok := i.processExitState.Sys().(int); ok && s == 9 {
+			return InstanceStatusKilled
+		}
 		return InstanceStatusStopped
+	}
+
+	if i.app.config.StopTimeout > 0 && time.Since(i.lastChange) > i.app.config.StopTimeout {
+		i.processErr = i.exec.Process.Kill()
+		return InstanceStatusKilled
 	}
 
 	return InstanceStatusStopping
