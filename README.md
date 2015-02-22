@@ -22,7 +22,7 @@ Gracevisor is trying to take the infrastructure approach and package it in an ea
 
 ## Progress
 
-At the moment we're build a proof of concept. It's not ready for production yet and it won't be any time soon. But if you want to contribute with ideas or with code, you're very welcome.
+At the moment we're building a proof of concept. It's not ready for production yet and it won't be any time soon. But if you want to contribute with ideas or code, you're very welcome. Open an issue or send me an email.
 
 ## I know it doesn't work yet, but I still want to try it out
 
