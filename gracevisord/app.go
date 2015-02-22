@@ -143,25 +143,19 @@ func (a *App) StopInstances(instanceId int, kill bool) error {
 
 func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	instance, err := a.reserveInstance()
-
 	defer func() {
-		if err := recover(); err != nil {
-			if err == ErrNoActiveInstances {
-				log.Print(err)
-				rw.WriteHeader(503)
-				req.Body.Close()
-			} else {
-				log.Print(err)
-			}
-		}
-
 		if instance != nil {
 			instance.Done()
 		}
 	}()
-
 	if err != nil {
-		panic(err)
+		if err == ErrNoActiveInstances {
+			rw.WriteHeader(503)
+			req.Body.Close()
+		} else {
+			log.Print(err)
+		}
+		return
 	}
 
 	req.URL.Scheme = "http"
