@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -21,6 +23,10 @@ const (
 	InstanceStatusExited
 	InstanceStatusFailed
 	InstanceStatusTimedOut
+)
+
+const (
+	HealthCheckTimeout = 1
 )
 
 type Instance struct {
@@ -108,20 +114,33 @@ func (i *Instance) Done() {
 	atomic.AddInt32(&i.connCount, -1)
 }
 
-func (i *Instance) healthCheck() int {
-	if i.app.config.Healthcheck == "" {
-		return InstanceStatusServing
+func (i *Instance) healthCheck() bool {
+	if i.app.config.HealthCheck == "" {
+		return true
 	}
-	return InstanceStatusServing // TODO
+
+	healthCheckUrl := url.URL{
+		Scheme: "http",
+		Host:   i.internalHostPort,
+		Path:   i.app.config.HealthCheck,
+	}
+
+	resp, err := http.Get(healthCheckUrl.String())
+	if err != nil || resp.StatusCode != 200 {
+		return false
+	}
+	resp.Body.Close()
+
+	return true
 }
 
 func (i *Instance) checkProcessStartupStatus() int {
 	if i.processExitState != nil || i.processErr != nil {
-		log.Print(i.processErr)
+		log.Print("aa", i.processErr, i.processExitState)
 		return InstanceStatusFailed
 	}
 
-	if i.app.config.StopTimeout > 0 && time.Since(i.lastChange) > i.app.config.StartTimeout {
+	if i.app.config.StopTimeout > 0 && time.Since(i.lastChange) > time.Duration(i.app.config.StartTimeout)*time.Second {
 		if i.exec.Process != nil {
 			i.processErr = i.exec.Process.Kill()
 		}
@@ -132,7 +151,10 @@ func (i *Instance) checkProcessStartupStatus() int {
 		return InstanceStatusStarting
 	}
 
-	return i.healthCheck()
+	if i.healthCheck() {
+		return InstanceStatusServing
+	}
+	return InstanceStatusStarting
 }
 
 func (i *Instance) checkProcessStoppingStatus() int {
@@ -147,7 +169,7 @@ func (i *Instance) checkProcessStoppingStatus() int {
 		return InstanceStatusStopped
 	}
 
-	if i.app.config.StopTimeout > 0 && time.Since(i.lastChange) > i.app.config.StopTimeout {
+	if i.app.config.StopTimeout > 0 && time.Since(i.lastChange) > time.Duration(i.app.config.StopTimeout)*time.Second {
 		i.processErr = i.exec.Process.Kill()
 		return InstanceStatusKilled
 	}

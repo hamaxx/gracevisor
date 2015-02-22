@@ -3,7 +3,6 @@ package main
 import (
 	"io/ioutil"
 	"path"
-	"time"
 
 	"github.com/hamaxx/gracevisor/deps/yaml.v2"
 )
@@ -18,12 +17,12 @@ type InternalPorts struct {
 type AppConfig struct {
 	Name        string `yaml:"name"`
 	Command     string `yaml:"command"`
-	Healthcheck string `yaml:"Healthcheck"`
+	HealthCheck string `yaml:"healthcheck"`
 
-	StopSignal   int           `yaml:"stop_signal"`
-	MaxRetries   int           `yaml:"max_retries"`
-	StartTimeout time.Duration `yaml:"start_timeout"`
-	StopTimeout  time.Duration `yaml:"stop_timeout"`
+	StopSignal   int `yaml:"stop_signal"`
+	MaxRetries   int `yaml:"max_retries"`
+	StartTimeout int `yaml:"start_timeout"`
+	StopTimeout  int `yaml:"stop_timeout"`
 
 	InternalHost string `yaml:"internal_host"`
 	ExternalHost string `yaml:"external_host"`

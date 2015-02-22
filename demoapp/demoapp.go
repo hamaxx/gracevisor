@@ -14,6 +14,7 @@ func main() {
 	fmt.Println("Listening on port", *port)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		//w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Hello from %d", *port)
 	})
 

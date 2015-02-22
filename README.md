@@ -44,7 +44,6 @@ Build and run gracevisorctl.
 - config: validation, default values, auto discover, conf.d
 - logging
 - configurable stop signal
-- healthcheck support
 - detailed instance status
 - daemonize supervisord
 - make file

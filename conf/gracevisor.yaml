@@ -12,6 +12,8 @@ apps:
       external_port: 8080
       internal_host: localhost
       max_retries: 5
+      start_timeout: 30
+      stop_timeout: 30
     - name: demo1
       command: ../demoapp/demoapp --port={port}
       healthcheck: /HealthCheck
@@ -19,3 +21,5 @@ apps:
       external_port: 8081
       internal_host: localhost
       max_retries: 5
+      start_timeout: 30
+      stop_timeout: 30
