@@ -29,6 +29,7 @@ func main() {
 		app := NewApp(appConfig, portPool)
 		runningApps[app.config.Name] = app
 		go func() {
+			app.StartNewInstance()
 			app.ListenAndServe()
 			appWg.Done()
 		}()

@@ -34,9 +34,9 @@ type Instance struct {
 	connWg    *sync.WaitGroup
 	connCount int32
 
-	exec         *exec.Cmd
-	processErr   error
-	processState *os.ProcessState
+	exec             *exec.Cmd
+	processErr       error
+	processExitState *os.ProcessState
 }
 
 func NewInstance(app *App, id uint32) (*Instance, error) {
@@ -64,7 +64,7 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		if instance.exec.Process != nil {
 			state, err := instance.exec.Process.Wait()
 			instance.processErr = err
-			instance.processState = state
+			instance.processExitState = state
 		}
 	}()
 
@@ -89,6 +89,7 @@ func (i *Instance) Stop() {
 
 }
 func (i *Instance) Kill() {
+	i.status = InstanceStatusStopping
 	i.lastChange = time.Now()
 	if i.exec.Process != nil {
 		i.processErr = i.exec.Process.Kill()
@@ -129,7 +130,7 @@ func (i *Instance) checkProcessStoppingStatus() int {
 		log.Print(i.processErr)
 		return InstanceStatusExited
 	}
-	if i.processState != nil && i.processState.Exited() {
+	if i.processExitState != nil {
 		return InstanceStatusStopped
 	}
 
@@ -137,11 +138,8 @@ func (i *Instance) checkProcessStoppingStatus() int {
 }
 
 func (i *Instance) checkProcessRunningStatus() int {
-	if i.processErr != nil || i.exec.Process == nil {
-		log.Print(i.processErr)
-		return InstanceStatusExited
-	}
-	if i.processState != nil && i.processState.Exited() {
+	if i.processErr != nil || i.exec.Process == nil || i.processExitState != nil {
+		log.Printf("%s:%s", i.processExitState, i.processErr)
 		return InstanceStatusExited
 	}
 

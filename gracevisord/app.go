@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -9,10 +10,14 @@ import (
 	"net/http/httputil"
 	"sync"
 	"sync/atomic"
+	"text/tabwriter"
 	"time"
 )
 
-var ErrNoActiveInstances = errors.New("No active instances")
+var (
+	ErrNoActiveInstances  = errors.New("No active instances")
+	ErrInstanceNotRunning = errors.New("Instance is not running")
+)
 
 type App struct {
 	config *AppConfig
@@ -49,26 +54,32 @@ func (a *App) startInstanceUpdater() {
 
 	go func() {
 		for {
-			starting := false
+			restart := false
 			for _, instance := range a.instances {
 				status := instance.UpdateStatus()
-				if status == InstanceStatusServing && instance != a.activeInstance {
-					a.activeInstanceLock.Lock()
-					currentActive := a.activeInstance
-					a.activeInstance = instance
-					a.activeInstanceLock.Unlock()
 
-					if currentActive != nil {
-						currentActive.Stop()
+				if instance == a.activeInstance {
+					if status != InstanceStatusServing {
+						a.activeInstance = nil
 					}
-				} else if status == InstanceStatusExited && instance == a.activeInstance {
-					a.activeInstance = nil
-				} else if status == InstanceStatusStarting {
-					starting = true
+					if status == InstanceStatusExited || status == InstanceStatusFailed {
+						restart = true
+					}
+				} else {
+					if status == InstanceStatusServing {
+						a.activeInstanceLock.Lock()
+						currentActive := a.activeInstance
+						a.activeInstance = instance
+						a.activeInstanceLock.Unlock()
+
+						if currentActive != nil {
+							currentActive.Stop()
+						}
+					}
 				}
 			}
 
-			if a.activeInstance == nil && !starting {
+			if restart {
 				// TODO retry count
 				err := a.StartNewInstance()
 				if err != nil {
@@ -102,6 +113,27 @@ func (a *App) StartNewInstance() error {
 	}
 
 	a.instances = append(a.instances, newInstance)
+	return nil
+}
+
+func (a *App) StopInstances(instanceId int, kill bool) error {
+	stopped := false
+	for _, instance := range a.instances {
+		if instanceId > 0 && int(instance.id) != instanceId {
+			continue
+		}
+		if instance.status == InstanceStatusServing || instance.status == InstanceStatusStarting {
+			stopped = true
+			if kill {
+				instance.Kill()
+			} else {
+				instance.Stop()
+			}
+		}
+	}
+	if !stopped {
+		return ErrInstanceNotRunning
+	}
 	return nil
 }
 
@@ -141,44 +173,48 @@ func (a *App) ListenAndServe() {
 	http.ListenAndServe(a.externalHostPort, a)
 }
 
-func (a *App) Report() string {
-	report := ""
-
-	displayN := 3
-
-	l := len(a.instances)
-	from := 0
-	if l > displayN {
-		from = l - displayN
+func (a *App) Report(displayN int) string {
+	writer := &bytes.Buffer{}
+	tabWriter := tabwriter.NewWriter(writer, 2, 2, 1, ' ', 0)
+	writeColumn := func(s string, f ...interface{}) {
+		tabWriter.Write([]byte(fmt.Sprintf(s, f...)))
+		tabWriter.Write([]byte("\t"))
 	}
 
-	report += fmt.Sprintf("[%s/%s]\n", a.config.Name, a.externalHostPort)
-	for _, instance := range a.instances[from:l] {
+	tabWriter.Write([]byte(fmt.Sprintf("[%s/%s]\n", a.config.Name, a.externalHostPort)))
+
+	from := 0
+	if len(a.instances) > displayN {
+		from = len(a.instances) - displayN
+	}
+
+	for _, instance := range a.instances[from:len(a.instances)] {
 		if instance == a.activeInstance {
-			report += fmt.Sprint(" * ")
+			writeColumn(" *")
 		} else {
-			report += fmt.Sprint("   ")
+			writeColumn("")
 		}
-		report += fmt.Sprintf("%d/%s ", instance.id, instance.internalHostPort)
+		writeColumn("%d/%s", instance.id, instance.internalHostPort)
 		switch instance.status {
 		case InstanceStatusServing:
-			report += fmt.Sprint("serving ")
+			writeColumn("serving")
 		case InstanceStatusStarting:
-			report += fmt.Sprint("starting")
+			writeColumn("starting")
 		case InstanceStatusStopping:
-			report += fmt.Sprint("stopping")
+			writeColumn("stopping")
 		case InstanceStatusStopped:
-			report += fmt.Sprint("stopped ")
+			writeColumn("stopped")
 		case InstanceStatusFailed:
-			report += fmt.Sprint("failed  ")
+			writeColumn("failed")
 		case InstanceStatusExited:
-			report += fmt.Sprint("exited  ")
+			writeColumn("exited")
 		}
-		report += fmt.Sprintf(" %s", time.Since(instance.lastChange)/time.Second*time.Second)
+		writeColumn("%s", time.Since(instance.lastChange)/time.Second*time.Second)
 		if instance.processErr != nil {
-			report += fmt.Sprintf(" %q", instance.processErr)
+			writeColumn("%q", instance.processErr)
 		}
-		report += fmt.Sprintln()
+		tabWriter.Write([]byte("\n"))
 	}
-	return report
+	tabWriter.Flush()
+	return writer.String()
 }

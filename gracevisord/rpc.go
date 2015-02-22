@@ -34,13 +34,37 @@ func (r *Rpc) Restart(appName string, res *string) error {
 	return app.StartNewInstance()
 }
 
+func (r *Rpc) Start(appName string, res *string) error {
+	app, ok := r.runningApps[appName]
+	if !ok {
+		return ErrInvalidApp
+	}
+	return app.StartNewInstance()
+}
+
+func (r *Rpc) Stop(appName string, res *string) error {
+	app, ok := r.runningApps[appName]
+	if !ok {
+		return ErrInvalidApp
+	}
+	return app.StopInstances(-1, false)
+}
+
+func (r *Rpc) Kill(appName string, res *string) error {
+	app, ok := r.runningApps[appName]
+	if !ok {
+		return ErrInvalidApp
+	}
+	return app.StopInstances(-1, true)
+}
+
 func (r *Rpc) Status(appName string, res *string) error {
 	if appName != "" {
 		app, ok := r.runningApps[appName]
 		if !ok {
 			return ErrInvalidApp
 		}
-		*res = app.Report()
+		*res = app.Report(10)
 	} else {
 		sortedApps := []*App{}
 		for _, app := range r.runningApps {
@@ -48,7 +72,7 @@ func (r *Rpc) Status(appName string, res *string) error {
 		}
 		sort.Sort(AppNameSort(sortedApps))
 		for _, app := range sortedApps {
-			*res += app.Report()
+			*res += app.Report(3)
 		}
 	}
 	return nil

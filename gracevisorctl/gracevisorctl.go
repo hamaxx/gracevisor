@@ -62,6 +62,27 @@ func main() {
 				basicRpcCall(c, "Restart", c.Args().First())
 			},
 		},
+		{
+			Name:  "start",
+			Usage: "start application",
+			Action: func(c *cli.Context) {
+				basicRpcCall(c, "Start", c.Args().First())
+			},
+		},
+		{
+			Name:  "stop",
+			Usage: "stop running instances",
+			Action: func(c *cli.Context) {
+				basicRpcCall(c, "Stop", c.Args().First())
+			},
+		},
+		{
+			Name:  "kill",
+			Usage: "kill running instances",
+			Action: func(c *cli.Context) {
+				basicRpcCall(c, "Kill", c.Args().First())
+			},
+		},
 	}
 
 	app.Run(os.Args)
