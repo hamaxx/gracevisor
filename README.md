@@ -1,5 +1,5 @@
 # gracevisor
-Supervisor process control with graceful restarts
+A Process Control System Built for the Web
 
 ## Goal
 
