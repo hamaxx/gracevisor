@@ -5,7 +5,7 @@ import (
 	"path"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	"github.com/hamaxx/gracevisor/deps/yaml.v2"
 )
 
 var configFile = "gracevisor.yaml"

@@ -6,7 +6,7 @@ import (
 	"net/rpc"
 	"os"
 
-	"github.com/codegangsta/cli"
+	"github.com/hamaxx/gracevisor/deps/cli"
 )
 
 const (
