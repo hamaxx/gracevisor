@@ -50,6 +50,7 @@ Build and run gracevisorctl.
 - detailed instance status
 - daemonize supervisord
 - make file
+- docs
 - **tests**
 - ...
 
