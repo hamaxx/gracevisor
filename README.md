@@ -52,7 +52,7 @@ Build and run gracevisorctl.
 
 **Long term**
 
-- alertings
+- alerts
 - statsd supports
 - web interface
 - fg command

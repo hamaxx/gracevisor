@@ -10,7 +10,7 @@ import (
 var configFile = "gracevisor.yaml"
 
 type InternalPorts struct {
-	From uint32 `yaml:"from:`
+	From uint32 `yaml:"from"`
 	To   uint32 `yaml:"to"`
 }
 
