@@ -44,7 +44,7 @@ Build and run gracevisorctl.
 - config: validation, default values, auto discover, conf.d
 - logging
 - detailed instance status
-- daemonize supervisord
+- daemonize gracevisord
 - make file
 - docs
 - **tests**

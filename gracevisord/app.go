@@ -32,6 +32,8 @@ type App struct {
 	externalHostPort string
 
 	instanceId uint32
+
+	appLogger *AppLogger
 }
 
 func NewApp(config *AppConfig, portPool *PortPool) *App {
@@ -42,6 +44,7 @@ func NewApp(config *AppConfig, portPool *PortPool) *App {
 		externalHostPort: fmt.Sprintf("%s:%d", config.ExternalHost, config.ExternalPort),
 	}
 
+	app.appLogger = NewAppLogger(app)
 	app.rp = &httputil.ReverseProxy{Director: func(req *http.Request) {}}
 
 	app.startInstanceUpdater()

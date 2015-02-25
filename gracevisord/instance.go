@@ -49,6 +49,8 @@ type Instance struct {
 	exec             *exec.Cmd
 	processErr       error
 	processExitState *os.ProcessState
+
+	instanceLogger *InstanceLogger
 }
 
 func NewInstance(app *App, id uint32) (*Instance, error) {
@@ -69,6 +71,10 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		exec:             exec.Command(cmd, attrs...),
 		connWg:           &sync.WaitGroup{},
 		lastChange:       time.Now(),
+	}
+	instance.instanceLogger, err = NewInstanceLogger(instance)
+	if err != nil {
+		return nil, err
 	}
 	instance.processErr = instance.exec.Start()
 

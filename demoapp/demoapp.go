@@ -16,6 +16,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		//w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Hello from %d", *port)
+		fmt.Printf("New request to %d\n", *port)
 	})
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
