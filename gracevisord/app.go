@@ -60,6 +60,7 @@ func (a *App) startInstanceUpdater() {
 	restartCount := 0
 
 	go func() {
+		// TODO refactor this. Instances should trigger status changes.
 		for {
 			lastStatus := -1
 

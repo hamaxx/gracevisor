@@ -43,7 +43,8 @@ Build and run gracevisorctl.
 - apps management: reload config, remove, add
 - config: validation, default values, auto discover, conf.d
 - detailed instance status
-- daemonize gracevisord
+- daemonize gracevisord (maybe it would be easier to just write systemd/upstart/... scripts)
+- per app user config (setuid, setgid)
 - make file
 - docs
 - **tests**

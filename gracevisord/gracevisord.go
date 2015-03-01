@@ -56,6 +56,8 @@ func startApp(config *Config) {
 }
 
 func main() {
+	MaybeBecomeChildProcess()
+
 	app := cli.NewApp()
 	app.Name = "gracevisord"
 	app.Usage = "gracevisor daemon"

@@ -83,23 +83,13 @@ type InstanceLogger struct {
 	instance *Instance
 }
 
-func NewInstanceLogger(instance *Instance) (*InstanceLogger, error) {
+func NewInstanceLogger(instance *Instance, outPipe, errPipe io.ReadCloser) (*InstanceLogger, error) {
 	il := &InstanceLogger{
 		instance: instance,
 	}
 
-	stdout, err := instance.exec.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	stderr, err := instance.exec.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	il.lineReader(stdout, instance.app.appLogger.logStdout)
-	il.lineReader(stderr, instance.app.appLogger.logStderr)
+	il.lineReader(outPipe, instance.app.appLogger.logStdout)
+	il.lineReader(errPipe, instance.app.appLogger.logStderr)
 
 	return il, nil
 }
