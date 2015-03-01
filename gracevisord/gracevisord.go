@@ -1,16 +1,16 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 
+	"github.com/hamaxx/gracevisor/deps/cli"
 	"github.com/hamaxx/gracevisor/deps/lumberjack"
 )
 
 var defaultConfigDir = "/etc/gracevisor/"
-var configPath = flag.String("conf", defaultConfigDir, "path to config dir")
 
 func configureGracevisorLogger(config *LoggerConfig) {
 	writer := &lumberjack.Logger{
@@ -23,16 +23,7 @@ func configureGracevisorLogger(config *LoggerConfig) {
 	log.SetOutput(writer)
 }
 
-func main() {
-	flag.Parse()
-
-	config, err := ParseConfing(*configPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	configureGracevisorLogger(config.Logger)
-
+func startApp(config *Config) {
 	portPool := NewPortPool(config.PortRange.From, config.PortRange.To)
 	runningApps := map[string]*App{}
 
@@ -62,5 +53,29 @@ func main() {
 	}
 
 	appWg.Wait()
+}
 
+func main() {
+	app := cli.NewApp()
+	app.Name = "gracevisord"
+	app.Usage = "gracevisor daemon"
+	app.Email = "jure@hamsworld.net"
+	app.Version = "0.0.1"
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "conf",
+			Value: defaultConfigDir,
+			Usage: "path to config dir",
+		},
+	}
+	app.Action = func(c *cli.Context) {
+		config, err := ParseConfing(c.String("conf"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		configureGracevisorLogger(config.Logger)
+		startApp(config)
+	}
+	app.Run(os.Args)
 }
