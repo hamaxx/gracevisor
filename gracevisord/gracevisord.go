@@ -26,11 +26,16 @@ func main() {
 	appWg := sync.WaitGroup{}
 	for _, appConfig := range config.Apps {
 		appWg.Add(1)
-		app := NewApp(appConfig, portPool)
+		app := NewApp(appConfig, config.Logger, portPool)
 		runningApps[app.config.Name] = app
 		go func() {
-			app.StartNewInstance()
-			app.ListenAndServe()
+			if err := app.StartNewInstance(); err != nil {
+				log.Print("Start new instance error:", err)
+				return
+			}
+			if err := app.ListenAndServe(); err != nil {
+				log.Print("App listen and serve error:", err)
+			}
 			appWg.Done()
 		}()
 	}
@@ -39,7 +44,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.Serve(rpcListener, nil)
+	if err := http.Serve(rpcListener, nil); err != nil {
+		log.Print("Rpc server error:", err)
+	}
 
 	appWg.Wait()
 

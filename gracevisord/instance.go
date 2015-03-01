@@ -106,7 +106,10 @@ func (i *Instance) Stop() {
 				log.Print(ErrInvalidStopSignal)
 				return
 			}
-			i.exec.Process.Signal(signal)
+			if err := i.exec.Process.Signal(signal); err != nil {
+				log.Print("Stop signal error:", err)
+				return
+			}
 		}
 	}()
 
@@ -145,7 +148,9 @@ func (i *Instance) healthCheck() bool {
 	if err != nil || resp.StatusCode != 200 {
 		return false
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		log.Print(err)
+	}
 
 	return true
 }

@@ -8,6 +8,8 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"github.com/hamaxx/gracevisor/deps/lumberjack"
 )
 
 var logLinePool = sync.Pool{}
@@ -22,25 +24,58 @@ func (ll *LogLine) String() string {
 	return fmt.Sprintf("[%d/%s] %s", ll.instanceId, ll.time, ll.line.String())
 }
 
+func (ll *LogLine) WriteTo(w io.Writer) error {
+	//TODO: no garbage
+	if _, err := w.Write([]byte(ll.String())); err != nil {
+		return err
+	}
+	if _, err := w.Write([]byte("\n")); err != nil {
+		return err
+	}
+	return nil
+}
+
 type AppLogger struct {
 	app *App
+
+	stdoutWriter io.WriteCloser
+	stderrWriter io.WriteCloser
 }
 
 func NewAppLogger(app *App) *AppLogger {
+	stdoutWriter := &lumberjack.Logger{
+		Filename:   app.config.StdoutLogFile,
+		MaxSize:    app.loggerConfig.MaxLogSize,
+		MaxAge:     app.loggerConfig.MaxLogAge,
+		MaxBackups: app.loggerConfig.MaxLogsKept,
+	}
+
+	stderrWriter := &lumberjack.Logger{
+		Filename:   app.config.StderrLogFile,
+		MaxSize:    app.loggerConfig.MaxLogSize,
+		MaxAge:     app.loggerConfig.MaxLogAge,
+		MaxBackups: app.loggerConfig.MaxLogsKept,
+	}
+
 	return &AppLogger{
-		app: app,
+		app:          app,
+		stdoutWriter: stdoutWriter,
+		stderrWriter: stderrWriter,
 	}
 }
 
 func (al *AppLogger) logStdout(logLine *LogLine) {
-	// TODO log to file
-	fmt.Println("out", al.app.config.Name, logLine)
+	if err := logLine.WriteTo(al.stdoutWriter); err != nil {
+		log.Print("Stdout write error:", err)
+	}
 	logLinePool.Put(logLine)
 }
 
 func (al *AppLogger) logStderr(logLine *LogLine) {
-	// TODO log to file
-	fmt.Println("err", al.app.config.Name, logLine)
+	if err := logLine.WriteTo(al.stderrWriter); err != nil {
+		log.Print("Stderr write error:", err)
+	}
+
 	logLinePool.Put(logLine)
 }
 
@@ -86,12 +121,17 @@ func (il *InstanceLogger) lineReader(pipe io.ReadCloser, writer func(*LogLine)) 
 			if len(line) > 0 && line[len(line)-1] == '\r' {
 				line = line[0 : len(line)-1]
 			}
-			writer(il.newLogLine(line))
+			ll, err := il.newLogLine(line)
+			if err != nil {
+				log.Print("Log write error:", err)
+				continue
+			}
+			writer(ll)
 		}
 	}()
 }
 
-func (il *InstanceLogger) newLogLine(line []byte) *LogLine {
+func (il *InstanceLogger) newLogLine(line []byte) (*LogLine, error) {
 	var logLine *LogLine
 
 	if v := logLinePool.Get(); v != nil {
@@ -101,9 +141,11 @@ func (il *InstanceLogger) newLogLine(line []byte) *LogLine {
 		logLine = &LogLine{}
 	}
 
-	logLine.line.Write(line)
+	if _, err := logLine.line.Write(line); err != nil {
+		return nil, err
+	}
 	logLine.time = time.Now()
 	logLine.instanceId = il.instance.id
 
-	return logLine
+	return logLine, nil
 }

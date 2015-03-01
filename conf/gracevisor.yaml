@@ -5,8 +5,8 @@ rpc:
     host: localhost
     port: 9001
 logger:
-    child_log_dir: "./log"
-    log_file: "./log/gracevisor.log"
+    child_log_dir: "/var/log/gracevisor"
+    log_file: "/var/log/gracevisor/gracevisor.log"
     max_log_size: 500
     max_logs_kept: -1
     max_log_age: -1

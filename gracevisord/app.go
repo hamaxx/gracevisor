@@ -20,7 +20,8 @@ var (
 )
 
 type App struct {
-	config *AppConfig
+	config       *AppConfig
+	loggerConfig *LoggerConfig
 
 	instances          []*Instance
 	activeInstance     *Instance
@@ -36,10 +37,11 @@ type App struct {
 	appLogger *AppLogger
 }
 
-func NewApp(config *AppConfig, portPool *PortPool) *App {
+func NewApp(config *AppConfig, loggerConfig *LoggerConfig, portPool *PortPool) *App {
 	app := &App{
 		config:           config,
-		instances:        make([]*Instance, 0, 3),
+		loggerConfig:     loggerConfig,
+		instances:        make([]*Instance, 0, 10),
 		portPool:         portPool,
 		externalHostPort: fmt.Sprintf("%s:%d", config.ExternalHost, config.ExternalPort),
 	}
@@ -154,7 +156,9 @@ func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		if err == ErrNoActiveInstances {
 			rw.WriteHeader(503)
-			req.Body.Close()
+			if err := req.Body.Close(); err != nil {
+				log.Print(err)
+			}
 		} else {
 			log.Print(err)
 		}
@@ -170,19 +174,25 @@ func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	a.rp.ServeHTTP(rw, req)
 }
 
-func (a *App) ListenAndServe() {
-	http.ListenAndServe(a.externalHostPort, a)
+func (a *App) ListenAndServe() error {
+	return http.ListenAndServe(a.externalHostPort, a)
 }
 
 func (a *App) Report(displayN int) string {
 	writer := &bytes.Buffer{}
 	tabWriter := tabwriter.NewWriter(writer, 2, 2, 1, ' ', 0)
 	writeColumn := func(s string, f ...interface{}) {
-		tabWriter.Write([]byte(fmt.Sprintf(s, f...)))
-		tabWriter.Write([]byte("\t"))
+		if _, err := tabWriter.Write([]byte(fmt.Sprintf(s, f...))); err != nil {
+			log.Print(err)
+		}
+		if _, err := tabWriter.Write([]byte("\t")); err != nil {
+			log.Print(err)
+		}
 	}
 
-	tabWriter.Write([]byte(fmt.Sprintf("[%s/%s]\n", a.config.Name, a.externalHostPort)))
+	if _, err := tabWriter.Write([]byte(fmt.Sprintf("[%s/%s]\n", a.config.Name, a.externalHostPort))); err != nil {
+		log.Print(err)
+	}
 
 	from := 0
 	if len(a.instances) > displayN {
@@ -218,8 +228,12 @@ func (a *App) Report(displayN int) string {
 		if instance.processErr != nil {
 			writeColumn("%q", instance.processErr)
 		}
-		tabWriter.Write([]byte("\n"))
+		if _, err := tabWriter.Write([]byte("\n")); err != nil {
+			log.Print(err)
+		}
 	}
-	tabWriter.Flush()
+	if err := tabWriter.Flush(); err != nil {
+		log.Print(err)
+	}
 	return writer.String()
 }

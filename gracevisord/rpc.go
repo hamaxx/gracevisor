@@ -84,7 +84,9 @@ func NewRpcServer(runningApps map[string]*App, config *RpcConfig) (net.Listener,
 		runningApps: runningApps,
 	}
 
-	rpc.Register(r)
+	if err := rpc.Register(r); err != nil {
+		return nil, err
+	}
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", fmt.Sprintf("%s:%d", config.Host, config.Port))
 	if e != nil {
