@@ -5,20 +5,33 @@ import (
 	"log"
 	"net/http"
 	"sync"
+
+	"github.com/hamaxx/gracevisor/deps/lumberjack"
 )
 
 var defaultConfigDir = "/etc/gracevisor/"
 var configPath = flag.String("conf", defaultConfigDir, "path to config dir")
 
+func configureGracevisorLogger(config *LoggerConfig) {
+	writer := &lumberjack.Logger{
+		Filename:   config.LogFile,
+		MaxSize:    config.MaxLogSize,
+		MaxAge:     config.MaxLogAge,
+		MaxBackups: config.MaxLogsKept,
+	}
+
+	log.SetOutput(writer)
+}
+
 func main() {
 	flag.Parse()
 
 	config, err := ParseConfing(*configPath)
-
 	if err != nil {
-		log.Print(err)
-		return
+		log.Fatal(err)
 	}
+
+	configureGracevisorLogger(config.Logger)
 
 	portPool := NewPortPool(config.PortRange.From, config.PortRange.To)
 	runningApps := map[string]*App{}

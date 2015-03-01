@@ -42,7 +42,6 @@ Build and run gracevisorctl.
 
 - apps management: reload config, remove, add
 - config: validation, default values, auto discover, conf.d
-- logging
 - detailed instance status
 - daemonize gracevisord
 - make file
