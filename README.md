@@ -26,26 +26,25 @@ At the moment we're building a proof of concept. It's not ready for production y
 
 ## I know it doesn't work yet, but I still want to try it out
 
-Build gracevisord package. Run it with config path.
+Build and install gracevisor
 
-    cd gracevisord
-    go build
-    ./gracevisord --conf ../conf
+    go get github.com/hamaxx/gracevisor/{gracevisord,gracevisorctl}
 
-Build and run gracevisorctl.
+Put your gracevisor.yaml file into /etc/gracevisor or pass the config dir as a paramater
 
-    cd gracevisorctl
-    go build
+    ./gracevisord --conf ./conf
+
+Run gracevisorctl to see the options
+
     ./gracevisorctl -h
 
 ## TODO
 
-- apps management: reload config, remove, add
-- config: validation, default values, auto discover, conf.d
-- detailed instance status
-- daemonize gracevisord (maybe it would be easier to just write systemd/upstart/... scripts)
 - configure env
-- make file
+- config: validation, default values, include statement
+- apps management: reload config, remove, add
+- daemonize gracevisord (maybe it would be easier to just write systemd/upstart/... scripts)
+- install script
 - docs
 - **tests**
 - ...
