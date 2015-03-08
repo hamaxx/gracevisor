@@ -7,14 +7,18 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/gob"
+	"errors"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 )
+
+var ErrInvalidUserId = errors.New("invalid user id format")
 
 type GvCmd struct {
 	Uid  int // or 0 to not change
@@ -23,6 +27,24 @@ type GvCmd struct {
 	Env  []string
 	Argv []string
 	Dir  string
+}
+
+func NewGvCmd(path string, env []string, argv []string, userConfig *UserConfig) (*GvCmd, error) {
+	gvCmd := &GvCmd{
+		Path: path,
+		Env:  env,
+		Argv: argv,
+	}
+
+	if userConfig != nil && userConfig.user != nil {
+		uid, err := strconv.Atoi(userConfig.user.Uid)
+		if err != nil {
+			return nil, ErrInvalidUserId
+		}
+		gvCmd.Uid = uid
+	}
+
+	return gvCmd, nil
 }
 
 func (c *GvCmd) start() (cmd *exec.Cmd, outPipe, errPipe io.ReadCloser, err error) {

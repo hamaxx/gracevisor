@@ -44,7 +44,7 @@ Build and run gracevisorctl.
 - config: validation, default values, auto discover, conf.d
 - detailed instance status
 - daemonize gracevisord (maybe it would be easier to just write systemd/upstart/... scripts)
-- per app user config (setuid, setgid)
+- configure env
 - make file
 - docs
 - **tests**

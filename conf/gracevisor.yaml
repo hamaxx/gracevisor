@@ -1,15 +1,18 @@
 port_range:
     from: 10000
     to: 11000
+
 rpc:
     host: localhost
     port: 9001
+
 logger:
     child_log_dir: "/var/log/gracevisor"
     log_file: "/var/log/gracevisor/gracevisor.log"
     max_log_size: 500
     max_logs_kept: -1
     max_log_age: -1
+
 apps:
     - name: demo
       command: ../demoapp/demoapp --port={port}
@@ -21,6 +24,7 @@ apps:
       max_retries: 5
       start_timeout: 30
       stop_timeout: 30
+
     - name: demo1
       command: ../demoapp/demoapp --port={port}
       healthcheck: /HealthCheck
@@ -31,3 +35,5 @@ apps:
       max_retries: 5
       start_timeout: 30
       stop_timeout: 30
+      user:
+        username: ham

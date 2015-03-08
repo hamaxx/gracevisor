@@ -72,11 +72,9 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		lastChange:       time.Now(),
 	}
 
-	// TODO cleanup
-	gvCmd := &GvCmd{
-		Path: cmdPath,
-		Env:  []string{},
-		Argv: cmdArgs,
+	gvCmd, err := NewGvCmd(cmdPath, []string{}, cmdArgs, app.config.User)
+	if err != nil {
+		return nil, err
 	}
 	cmd, outPipe, errPipe, err := gvCmd.start()
 	instance.cmd = cmd

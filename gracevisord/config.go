@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path"
 
 	"github.com/hamaxx/gracevisor/deps/yaml.v2"
@@ -25,6 +26,28 @@ var (
 	defaultMaxLogSize  = 500
 	defaultLogFileMode = os.FileMode(0600)
 )
+
+type UserConfig struct {
+	UserName string `yaml:"username"`
+	// GroupName string `yaml:"groupname"` TODO when os package will support group lookup
+
+	user *user.User
+}
+
+func (c *UserConfig) clean(g *Config) error {
+	if c.UserName == "" {
+		return nil
+	}
+
+	user, err := user.Lookup(c.UserName)
+	if err != nil {
+		return err
+	}
+
+	c.user = user
+
+	return nil
+}
 
 type InternalPortsConfig struct {
 	From uint32 `yaml:"from"`
@@ -60,6 +83,8 @@ type AppConfig struct {
 
 	StdoutLogFile string `yaml:"stdout_log_file"`
 	StderrLogFile string `yaml:"stderr_log_file"`
+
+	User *UserConfig `yaml:"user"`
 }
 
 func (c *AppConfig) clean(g *Config) error {
@@ -77,6 +102,12 @@ func (c *AppConfig) clean(g *Config) error {
 	}
 	if err := os.MkdirAll(path.Dir(c.StderrLogFile), defaultLogFileMode); err != nil {
 		return err
+	}
+
+	if c.User != nil {
+		if err := c.User.clean(g); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -123,6 +154,7 @@ type Config struct {
 	Apps      []*AppConfig         `yaml:"apps"`
 	Rpc       *RpcConfig           `yaml:"rpc"`
 	Logger    *LoggerConfig        `yaml:"logger"`
+	// TODO User      *UserConfig          `yaml:"user"`
 }
 
 func (c *Config) clean(g *Config) error {
