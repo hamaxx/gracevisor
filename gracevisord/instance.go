@@ -67,7 +67,11 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		lastChange:       time.Now(),
 	}
 
-	gvCmd, err := NewGvCmd(cmdPath, app.config.Environment, cmdArgs, app.config.User)
+	uid := 0
+	if app.config.User != nil {
+		uid = app.config.User.Uid
+	}
+	gvCmd, err := NewGvCmd(cmdPath, app.config.Environment, cmdArgs, uid)
 	if err != nil {
 		return nil, err
 	}

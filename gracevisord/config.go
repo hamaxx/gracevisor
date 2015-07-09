@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/hamaxx/gracevisor/deps/yaml.v2"
@@ -19,6 +20,7 @@ var (
 	ErrPortBadgeRequired     = errors.New("App must have {port} in command or environment")
 	ErrInvalidStopSignal     = errors.New("Invalid stop signal")
 	ErrDuplicateExternalPort = errors.New("Cannot used duplicate external app ports")
+	ErrInvalidUserId         = errors.New("invalid user id format")
 )
 
 const (
@@ -44,7 +46,7 @@ type UserConfig struct {
 	UserName string `yaml:"username"`
 	// GroupName string `yaml:"groupname"` TODO when os package will support group lookup
 
-	user *user.User
+	Uid int
 }
 
 func (c *UserConfig) clean(g *Config) error {
@@ -57,7 +59,12 @@ func (c *UserConfig) clean(g *Config) error {
 		return err
 	}
 
-	c.user = user
+	uid, err := strconv.Atoi(user.Uid)
+	if err != nil {
+		return ErrInvalidUserId
+	}
+
+	c.Uid = uid
 
 	return nil
 }
