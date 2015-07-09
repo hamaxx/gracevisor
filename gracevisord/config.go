@@ -68,9 +68,10 @@ func (c *InternalPortsConfig) clean(g *Config) error {
 }
 
 type AppConfig struct {
-	Name        string `yaml:"name"`
-	Command     string `yaml:"command"`
-	HealthCheck string `yaml:"healthcheck"`
+	Name        string   `yaml:"name"`
+	Command     string   `yaml:"command"`
+	Environment []string `yaml:"environment"`
+	HealthCheck string   `yaml:"healthcheck"`
 
 	StopSignal   string `yaml:"stop_signal"`
 	MaxRetries   int    `yaml:"max_retries"`
