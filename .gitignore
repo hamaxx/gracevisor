@@ -25,3 +25,8 @@ _testmain.go
 
 # vim
 *.sw[pon]
+
+# compiled apps
+demoapp
+gracevisorctl
+gracevisord
