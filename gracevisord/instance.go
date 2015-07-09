@@ -26,6 +26,7 @@ const (
 
 const (
 	HealthCheckTimeout = 1
+	PortBadge          = "{port}"
 )
 
 type Instance struct {
@@ -54,8 +55,6 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		return nil, err
 	}
 
-	cmdPath, cmdArgs := parseCommand(app.config.Command, port)
-
 	instance := &Instance{
 		id:               id,
 		app:              app,
@@ -67,11 +66,19 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		lastChange:       time.Now(),
 	}
 
+	cmdPath, cmdArgs := parseCommand(parsePortBadge(app.config.Command, port))
+
+	environment := app.config.Environment
+	for i, env := range environment {
+		environment[i] = parsePortBadge(env, port)
+	}
+
 	uid := 0
 	if app.config.User != nil {
 		uid = app.config.User.Uid
 	}
-	gvCmd, err := NewGvCmd(cmdPath, app.config.Environment, cmdArgs, uid)
+
+	gvCmd, err := NewGvCmd(cmdPath, environment, cmdArgs, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -95,9 +102,12 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 	return instance, nil
 }
 
-func parseCommand(cmd string, port uint32) (string, []string) {
-	withPort := strings.Replace(cmd, "{port}", fmt.Sprint(port), -1)
-	command := strings.Split(withPort, " ")
+func parsePortBadge(input string, port uint32) string {
+	return strings.Replace(input, PortBadge, fmt.Sprint(port), -1)
+}
+
+func parseCommand(cmd string) (string, []string) {
+	command := strings.Split(cmd, " ")
 	return command[0], command
 }
 

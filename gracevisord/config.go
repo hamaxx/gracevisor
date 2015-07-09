@@ -172,8 +172,14 @@ func (c *AppConfig) clean(g *Config) error {
 }
 
 func (c *AppConfig) hasPortBadge() bool {
-	if strings.Contains(c.Command, "{port}") {
+	if strings.Contains(c.Command, PortBadge) {
 		return true
+	}
+
+	for _, env := range c.Environment {
+		if strings.Contains(env, PortBadge) {
+			return true
+		}
 	}
 
 	return false
