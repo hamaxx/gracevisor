@@ -7,19 +7,26 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"strings"
 
 	"github.com/hamaxx/gracevisor/deps/yaml.v2"
 )
 
-var configFile = "gracevisor.yaml"
-
 var (
 	ErrInvalidPortRange = errors.New("Invalid port range")
+	ErrNameRequired = errors.New("Name must be specified for app")
+	ErrCommandRequired = errors.New("Command must be specified for app")
+	ErrPortBadgeRequired = errors.New("App must have {port} in command or environment")
 )
 
-var (
-	defaultPortFrom = 10000
-	defaultPortTo   = 11000
+const (
+	configFile = "gracevisor.yaml"
+
+	defaultPortFrom = uint32(10000)
+	defaultPortTo   = uint32(11000)
+	
+	defaultRpcHost = "localhost"
+	defaultRpcPort = uint32(9001)
 
 	defaultLogFile     = "/var/log/gracevisor/gracevisor.log"
 	defaultLogDir      = "/var/log/gracevisor"
@@ -56,8 +63,8 @@ type InternalPortsConfig struct {
 
 func (c *InternalPortsConfig) clean(g *Config) error {
 	if c.From == 0 && c.To == 0 {
-		c.From = uint32(defaultPortFrom)
-		c.To = uint32(defaultPortTo)
+		c.From = defaultPortFrom
+		c.To = defaultPortTo
 	}
 
 	if c.From >= c.To {
@@ -89,7 +96,16 @@ type AppConfig struct {
 }
 
 func (c *AppConfig) clean(g *Config) error {
-	// TODO
+	if c.Name == "" {
+		return ErrNameRequired
+	}
+	if c.Command == "" {
+		return ErrCommandRequired
+	}
+	
+	if !c.hasPortBadge() {
+		return ErrPortBadgeRequired
+	}
 
 	if c.StdoutLogFile == "" {
 		c.StdoutLogFile = path.Join(g.Logger.ChildLogDir, fmt.Sprintf("app_%s.out", c.Name))
@@ -105,6 +121,9 @@ func (c *AppConfig) clean(g *Config) error {
 		return err
 	}
 
+	if c.User == nil {
+		c.User = g.User
+	}
 	if c.User != nil {
 		if err := c.User.clean(g); err != nil {
 			return err
@@ -114,13 +133,28 @@ func (c *AppConfig) clean(g *Config) error {
 	return nil
 }
 
+func (c *AppConfig) hasPortBadge() bool {
+	if strings.Contains(c.Command, "{port}") {
+		return true
+	}
+	
+	return false
+}
+
 type RpcConfig struct {
 	Host string `yaml:"host"`
 	Port uint32 `yaml:"port"`
 }
 
 func (c *RpcConfig) clean(g *Config) error {
-	// TODO
+	if c.Host == "" {
+		c.Host = defaultRpcHost
+	}
+	
+	if c.Port == 0 {
+		c.Port = defaultRpcPort
+	}
+	
 	return nil
 }
 
@@ -155,7 +189,7 @@ type Config struct {
 	Apps      []*AppConfig         `yaml:"apps"`
 	Rpc       *RpcConfig           `yaml:"rpc"`
 	Logger    *LoggerConfig        `yaml:"logger"`
-	// TODO User      *UserConfig          `yaml:"user"`
+	User      *UserConfig          `yaml:"user"`
 }
 
 func (c *Config) clean(g *Config) error {
@@ -190,7 +224,7 @@ func (c *Config) clean(g *Config) error {
 }
 
 func ParseConfing(configPath string) (*Config, error) {
-	// TODO: validate params, default values, conf.d
+	// TODO: conf.d
 	data, err := ioutil.ReadFile(path.Join(configPath, configFile))
 	if err != nil {
 		return nil, err
