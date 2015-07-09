@@ -13,11 +13,11 @@ import (
 )
 
 var (
-	ErrInvalidPortRange = errors.New("Invalid port range")
-	ErrNameRequired = errors.New("Name must be specified for app")
-	ErrCommandRequired = errors.New("Command must be specified for app")
-	ErrPortBadgeRequired = errors.New("App must have {port} in command or environment")
-	ErrInvalidStopSignal = errors.New("Invalid stop signal")
+	ErrInvalidPortRange      = errors.New("Invalid port range")
+	ErrNameRequired          = errors.New("Name must be specified for app")
+	ErrCommandRequired       = errors.New("Command must be specified for app")
+	ErrPortBadgeRequired     = errors.New("App must have {port} in command or environment")
+	ErrInvalidStopSignal     = errors.New("Invalid stop signal")
 	ErrDuplicateExternalPort = errors.New("Cannot used duplicate external app ports")
 )
 
@@ -26,11 +26,11 @@ const (
 
 	defaultPortFrom = uint32(10000)
 	defaultPortTo   = uint32(11000)
-	
-	defaultHost = "localhost"
-	defaultRpcPort = uint32(9001)
+
+	defaultHost         = "localhost"
+	defaultRpcPort      = uint32(9001)
 	defaultExternalPort = uint32(8080)
-	
+
 	defaultStopSignal = "TERM"
 	defaultMaxRetries = 5
 
@@ -109,11 +109,11 @@ func (c *AppConfig) clean(g *Config) error {
 	if c.Command == "" {
 		return ErrCommandRequired
 	}
-	
+
 	if !c.hasPortBadge() {
 		return ErrPortBadgeRequired
 	}
-	
+
 	if c.StopSignalName == "" {
 		c.StopSignalName = defaultStopSignal
 	}
@@ -122,18 +122,18 @@ func (c *AppConfig) clean(g *Config) error {
 		return ErrInvalidStopSignal
 	}
 	c.StopSignal = signal
-	
+
 	if c.MaxRetries == 0 {
 		c.MaxRetries = defaultMaxRetries
 	}
-	
+
 	if c.InternalHost == "" {
 		c.InternalHost = defaultHost
 	}
 	if c.ExternalHost == "" {
 		c.ExternalHost = defaultHost
 	}
-	
+
 	if c.ExternalPort == 0 {
 		c.ExternalPort = defaultExternalPort
 	}
@@ -168,7 +168,7 @@ func (c *AppConfig) hasPortBadge() bool {
 	if strings.Contains(c.Command, "{port}") {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -181,11 +181,11 @@ func (c *RpcConfig) clean(g *Config) error {
 	if c.Host == "" {
 		c.Host = defaultHost
 	}
-	
+
 	if c.Port == 0 {
 		c.Port = defaultRpcPort
 	}
-	
+
 	return nil
 }
 
@@ -251,12 +251,13 @@ func (c *Config) clean(g *Config) error {
 			return err
 		}
 	}
-	
+
 	usedPorts := make(map[uint32]bool)
 	for _, app := range c.Apps {
 		if err := app.clean(c); err != nil {
 			return err
 		}
+
 		_, used := usedPorts[app.ExternalPort]
 		if used {
 			return ErrDuplicateExternalPort
