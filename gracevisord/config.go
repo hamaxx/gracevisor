@@ -17,6 +17,8 @@ var (
 	ErrNameRequired = errors.New("Name must be specified for app")
 	ErrCommandRequired = errors.New("Command must be specified for app")
 	ErrPortBadgeRequired = errors.New("App must have {port} in command or environment")
+	ErrInvalidStopSignal = errors.New("Invalid stop signal")
+	ErrDuplicateExternalPort = errors.New("Cannot used duplicate external app ports")
 )
 
 const (
@@ -25,8 +27,12 @@ const (
 	defaultPortFrom = uint32(10000)
 	defaultPortTo   = uint32(11000)
 	
-	defaultRpcHost = "localhost"
+	defaultHost = "localhost"
 	defaultRpcPort = uint32(9001)
+	defaultExternalPort = uint32(8080)
+	
+	defaultStopSignal = "TERM"
+	defaultMaxRetries = 5
 
 	defaultLogFile     = "/var/log/gracevisor/gracevisor.log"
 	defaultLogDir      = "/var/log/gracevisor"
@@ -80,10 +86,11 @@ type AppConfig struct {
 	Environment []string `yaml:"environment"`
 	HealthCheck string   `yaml:"healthcheck"`
 
-	StopSignal   string `yaml:"stop_signal"`
-	MaxRetries   int    `yaml:"max_retries"`
-	StartTimeout int    `yaml:"start_timeout"`
-	StopTimeout  int    `yaml:"stop_timeout"`
+	StopSignal     os.Signal
+	StopSignalName string `yaml:"stop_signal"`
+	MaxRetries     int    `yaml:"max_retries"`
+	StartTimeout   int    `yaml:"start_timeout"`
+	StopTimeout    int    `yaml:"stop_timeout"`
 
 	InternalHost string `yaml:"internal_host"`
 	ExternalHost string `yaml:"external_host"`
@@ -105,6 +112,30 @@ func (c *AppConfig) clean(g *Config) error {
 	
 	if !c.hasPortBadge() {
 		return ErrPortBadgeRequired
+	}
+	
+	if c.StopSignalName == "" {
+		c.StopSignalName = defaultStopSignal
+	}
+	signal, ok := Signals[c.StopSignalName]
+	if !ok {
+		return ErrInvalidStopSignal
+	}
+	c.StopSignal = signal
+	
+	if c.MaxRetries == 0 {
+		c.MaxRetries = defaultMaxRetries
+	}
+	
+	if c.InternalHost == "" {
+		c.InternalHost = defaultHost
+	}
+	if c.ExternalHost == "" {
+		c.ExternalHost = defaultHost
+	}
+	
+	if c.ExternalPort == 0 {
+		c.ExternalPort = defaultExternalPort
 	}
 
 	if c.StdoutLogFile == "" {
@@ -148,7 +179,7 @@ type RpcConfig struct {
 
 func (c *RpcConfig) clean(g *Config) error {
 	if c.Host == "" {
-		c.Host = defaultRpcHost
+		c.Host = defaultHost
 	}
 	
 	if c.Port == 0 {
@@ -215,10 +246,22 @@ func (c *Config) clean(g *Config) error {
 	if err := c.Logger.clean(c); err != nil {
 		return err
 	}
+	if c.User != nil {
+		if err := c.User.clean(c); err != nil {
+			return err
+		}
+	}
+	
+	usedPorts := make(map[uint32]bool)
 	for _, app := range c.Apps {
 		if err := app.clean(c); err != nil {
 			return err
 		}
+		_, used := usedPorts[app.ExternalPort]
+		if used {
+			return ErrDuplicateExternalPort
+		}
+		usedPorts[app.ExternalPort] = true
 	}
 	return nil
 }

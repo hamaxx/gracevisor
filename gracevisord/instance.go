@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -27,10 +26,6 @@ const (
 
 const (
 	HealthCheckTimeout = 1
-)
-
-var (
-	ErrInvalidStopSignal = errors.New("Invalid stop signal")
 )
 
 type Instance struct {
@@ -108,12 +103,7 @@ func (i *Instance) Stop() {
 	go func() {
 		i.connWg.Wait()
 		if i.cmd.Process != nil {
-			signal, ok := Signals[i.app.config.StopSignal]
-			if !ok {
-				log.Print(ErrInvalidStopSignal)
-				return
-			}
-			if err := i.cmd.Process.Signal(signal); err != nil {
+			if err := i.cmd.Process.Signal(i.app.config.StopSignal); err != nil {
 				log.Print("Stop signal error:", err)
 				return
 			}
