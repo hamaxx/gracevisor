@@ -19,7 +19,8 @@ var (
 	ErrCommandRequired       = errors.New("Command must be specified for app")
 	ErrPortBadgeRequired     = errors.New("App must have {port} in command or environment")
 	ErrInvalidStopSignal     = errors.New("Invalid stop signal")
-	ErrDuplicateExternalPort = errors.New("Cannot used duplicate external app ports")
+	ErrDuplicateExternalPort = errors.New("Cannot use duplicate external app ports")
+	ErrDuplicateAppName      = errors.New("Cannot use duplicate app name")
 	ErrInvalidUserId         = errors.New("invalid user id format")
 )
 
@@ -234,14 +235,12 @@ type Config struct {
 	Rpc       *RpcConfig           `yaml:"rpc"`
 	Logger    *LoggerConfig        `yaml:"logger"`
 	User      *UserConfig          `yaml:"user"`
+	Include   []string             `yaml:"apps_include"`
 }
 
 func (c *Config) clean(g *Config) error {
 	if c.PortRange == nil {
 		c.PortRange = &InternalPortsConfig{}
-	}
-	if c.Apps == nil {
-		c.Apps = []*AppConfig{}
 	}
 	if c.Rpc == nil {
 		c.Rpc = &RpcConfig{}
@@ -266,6 +265,7 @@ func (c *Config) clean(g *Config) error {
 	}
 
 	usedPorts := make(map[uint32]bool)
+	usedNames := make(map[string]bool)
 	for _, app := range c.Apps {
 		if err := app.clean(c); err != nil {
 			return err
@@ -276,7 +276,65 @@ func (c *Config) clean(g *Config) error {
 			return ErrDuplicateExternalPort
 		}
 		usedPorts[app.ExternalPort] = true
+		
+		_, used = usedNames[app.Name]
+		if used {
+			return ErrDuplicateAppName
+		}
+		usedNames[app.Name] = true
 	}
+	return nil
+}
+
+func (c *Config) include(inc string) error {
+	fi, err := os.Stat(inc)
+	if err != nil {
+		return err
+	}
+	
+	if fi.IsDir() {
+		files, err := ioutil.ReadDir(inc)
+		if err != nil {
+			return err
+		}
+		
+		for _, file := range files {
+			if !file.IsDir() {
+				if err := c.includeFile(path.Join(inc, file.Name())); err != nil {
+					return err
+				}
+			}
+		}
+	} else {
+		if err := c.includeFile(inc); err != nil {
+			return err
+		}
+	}
+	
+	return nil
+}
+
+func (c *Config) includeFile(fn string) error {
+	if path.Base(fn) == configFile {
+		return nil
+	}
+	
+	if !strings.HasSuffix(fn, ".yaml") {
+		return nil
+	}
+	
+	data, err := ioutil.ReadFile(fn)
+	if err != nil {
+		return err
+	}
+	
+	app := &AppConfig{}
+	if err := yaml.Unmarshal(data, app); err != nil {
+		return err
+	}
+	
+	c.Apps = append(c.Apps, app)
+	
 	return nil
 }
 
@@ -290,6 +348,12 @@ func ParseConfing(configPath string) (*Config, error) {
 	config := &Config{}
 	if err := yaml.Unmarshal(data, config); err != nil {
 		return nil, err
+	}
+	
+	for _, inc := range config.Include {
+		if err := config.include(inc); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := config.clean(config); err != nil {
