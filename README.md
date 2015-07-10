@@ -40,8 +40,6 @@ Run gracevisorctl to see the options
 
 ## TODO
 
-- configure env
-- config: validation, default values, include statement
 - apps management: reload config, remove, add
 - daemonize gracevisord (maybe it would be easier to just write systemd/upstart/... scripts)
 - install script

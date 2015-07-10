@@ -34,3 +34,4 @@ gracevisord
 # log files
 *.out
 *.err
+*.log
