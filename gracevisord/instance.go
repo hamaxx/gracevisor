@@ -168,7 +168,7 @@ func (i *Instance) healthCheck() bool {
 
 func (i *Instance) checkProcessStartupStatus() int {
 	if i.processExitState != nil || i.processErr != nil {
-		log.Print("aa", i.processErr, i.processExitState)
+		log.Print("Process exited on startup", i.processErr, i.processExitState)
 		return InstanceStatusFailed
 	}
 
