@@ -30,3 +30,7 @@ _testmain.go
 demoapp
 gracevisorctl
 gracevisord
+
+# log files
+*.out
+*.err
