@@ -54,7 +54,7 @@ func main() {
 			Name:  "status",
 			Usage: "display application status",
 			Action: func(c *cli.Context) {
-				basicRpcCall(c, "Status", "")
+				basicRpcCall(c, "Status", c.Args().First())
 			},
 		},
 		{
