@@ -117,14 +117,13 @@ func (a *App) startInstanceUpdater() {
 
 func (a *App) reserveInstance() (*Instance, error) {
 	a.activeInstanceLock.Lock()
+	defer a.activeInstanceLock.Unlock()
 
 	instance := a.activeInstance
 	if instance == nil {
 		return nil, ErrNoActiveInstances
 	}
 	instance.Serve()
-
-	a.activeInstanceLock.Unlock()
 
 	return instance, nil
 }
@@ -212,7 +211,7 @@ func (a *App) Report(displayN int) string {
 	if len(a.instances) > displayN {
 		from = len(a.instances) - displayN
 	}
-	
+
 	sort.Stable(InstanceStatusSort(a.instances))
 
 	for _, instance := range a.instances[from:len(a.instances)] {
