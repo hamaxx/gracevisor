@@ -276,7 +276,7 @@ func (c *Config) clean(g *Config) error {
 			return ErrDuplicateExternalPort
 		}
 		usedPorts[app.ExternalPort] = true
-		
+
 		_, used = usedNames[app.Name]
 		if used {
 			return ErrDuplicateAppName
@@ -291,13 +291,13 @@ func (c *Config) include(inc string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if fi.IsDir() {
 		files, err := ioutil.ReadDir(inc)
 		if err != nil {
 			return err
 		}
-		
+
 		for _, file := range files {
 			if !file.IsDir() {
 				if err := c.includeFile(path.Join(inc, file.Name())); err != nil {
@@ -310,7 +310,7 @@ func (c *Config) include(inc string) error {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -318,23 +318,23 @@ func (c *Config) includeFile(fn string) error {
 	if path.Base(fn) == configFile {
 		return nil
 	}
-	
+
 	if !strings.HasSuffix(fn, ".yaml") {
 		return nil
 	}
-	
+
 	data, err := ioutil.ReadFile(fn)
 	if err != nil {
 		return err
 	}
-	
+
 	app := &AppConfig{}
 	if err := yaml.Unmarshal(data, app); err != nil {
 		return err
 	}
-	
+
 	c.Apps = append(c.Apps, app)
-	
+
 	return nil
 }
 
@@ -349,7 +349,7 @@ func ParseConfing(configPath string) (*Config, error) {
 	if err := yaml.Unmarshal(data, config); err != nil {
 		return nil, err
 	}
-	
+
 	for _, inc := range config.Include {
 		if err := config.include(inc); err != nil {
 			return nil, err
