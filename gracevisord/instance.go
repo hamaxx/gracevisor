@@ -118,7 +118,7 @@ func parseCommand(cmd string) (string, []string) {
 func (i *Instance) Stop() {
 	i.status = InstanceStatusStopping
 	i.lastChange = time.Now()
-	
+
 	// wait for all http requests to finish
 	go func() {
 		i.connWg.Wait()

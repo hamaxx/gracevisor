@@ -14,14 +14,12 @@ import (
 )
 
 var (
-	ErrInvalidPortRange      = errors.New("Invalid port range")
-	ErrNameRequired          = errors.New("Name must be specified for app")
-	ErrCommandRequired       = errors.New("Command must be specified for app")
-	ErrPortBadgeRequired     = errors.New("App must have {port} in command or environment")
-	ErrInvalidStopSignal     = errors.New("Invalid stop signal")
-	ErrDuplicateExternalPort = errors.New("Cannot use duplicate external app ports")
-	ErrDuplicateAppName      = errors.New("Cannot use duplicate app name")
-	ErrInvalidUserId         = errors.New("invalid user id format")
+	ErrInvalidPortRange  = errors.New("Invalid port range")
+	ErrNameRequired      = errors.New("Name must be specified for app")
+	ErrCommandRequired   = errors.New("Command must be specified for app")
+	ErrPortBadgeRequired = errors.New("App must have {port} in command or environment")
+	ErrInvalidStopSignal = errors.New("Invalid stop signal")
+	ErrInvalidUserId     = errors.New("invalid user id format")
 )
 
 const (
@@ -268,18 +266,18 @@ func (c *Config) clean(g *Config) error {
 	usedNames := make(map[string]bool)
 	for _, app := range c.Apps {
 		if err := app.clean(c); err != nil {
-			return err
+			return fmt.Errorf("%s: %s", app.Name, err)
 		}
 
 		_, used := usedPorts[app.ExternalPort]
 		if used {
-			return ErrDuplicateExternalPort
+			return fmt.Errorf("%s: Cannot use duplicate external port %d", app.Name, app.ExternalPort)
 		}
 		usedPorts[app.ExternalPort] = true
 
 		_, used = usedNames[app.Name]
 		if used {
-			return ErrDuplicateAppName
+			return fmt.Errorf("%s: Cannot use duplicate app name %s", app.Name, app.Name)
 		}
 		usedNames[app.Name] = true
 	}
@@ -295,7 +293,7 @@ func (c *Config) include(inc string) error {
 	if fi.IsDir() {
 		files, err := ioutil.ReadDir(inc)
 		if err != nil {
-			return err
+			return fmt.Errorf("apps_include: %s", err)
 		}
 
 		for _, file := range files {
@@ -325,12 +323,12 @@ func (c *Config) includeFile(fn string) error {
 
 	data, err := ioutil.ReadFile(fn)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %s", fn, err)
 	}
 
 	app := &AppConfig{}
 	if err := yaml.Unmarshal(data, app); err != nil {
-		return err
+		return fmt.Errorf("%s: %s", fn, err)
 	}
 
 	c.Apps = append(c.Apps, app)
@@ -339,14 +337,15 @@ func (c *Config) includeFile(fn string) error {
 }
 
 func ParseConfing(configPath string) (*Config, error) {
-	data, err := ioutil.ReadFile(path.Join(configPath, configFile))
+	fn := path.Join(configPath, configFile)
+	data, err := ioutil.ReadFile(fn)
 	if err != nil {
 		return nil, err
 	}
 
 	config := &Config{}
 	if err := yaml.Unmarshal(data, config); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %s", fn, err)
 	}
 
 	for _, inc := range config.Include {
