@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"text/tabwriter"
@@ -18,6 +19,18 @@ var (
 	ErrNoActiveInstances  = errors.New("No active instances")
 	ErrInstanceNotRunning = errors.New("Instance is not running")
 )
+
+type InstanceStatusSort []*Instance
+
+func (v InstanceStatusSort) Len() int {
+	return len(v)
+}
+func (v InstanceStatusSort) Swap(i, j int) {
+	v[i], v[j] = v[j], v[i]
+}
+func (v InstanceStatusSort) Less(i, j int) bool {
+	return v[i].status > v[j].status
+}
 
 type App struct {
 	config       *AppConfig
@@ -199,6 +212,8 @@ func (a *App) Report(displayN int) string {
 	if len(a.instances) > displayN {
 		from = len(a.instances) - displayN
 	}
+	
+	sort.Stable(InstanceStatusSort(a.instances))
 
 	for _, instance := range a.instances[from:len(a.instances)] {
 		if instance == a.activeInstance {
