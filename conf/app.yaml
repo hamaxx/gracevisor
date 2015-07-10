@@ -1,0 +1,3 @@
+name: demo2
+command: ../demoapp/demoapp --port={port}
+external_port: 8082
