@@ -339,7 +339,6 @@ func (c *Config) includeFile(fn string) error {
 }
 
 func ParseConfing(configPath string) (*Config, error) {
-	// TODO: conf.d
 	data, err := ioutil.ReadFile(path.Join(configPath, configFile))
 	if err != nil {
 		return nil, err
