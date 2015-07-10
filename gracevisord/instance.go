@@ -68,9 +68,9 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 
 	cmdPath, cmdArgs := parseCommand(parsePortBadge(app.config.Command, port))
 
-	environment := app.config.Environment
-	for i, env := range environment {
-		environment[i] = parsePortBadge(env, port)
+	environment := make([]string, 0, len(app.config.Environment))
+	for _, env := range app.config.Environment {
+		environment = append(environment, parsePortBadge(env, port))
 	}
 
 	uid := 0
