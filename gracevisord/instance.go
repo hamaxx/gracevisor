@@ -66,6 +66,7 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		lastChange:       time.Now(),
 	}
 
+	// prepare command arguments
 	cmdPath, cmdArgs := parseCommand(parsePortBadge(app.config.Command, port))
 
 	environment := make([]string, 0, len(app.config.Environment))
@@ -78,6 +79,7 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		uid = app.config.User.Uid
 	}
 
+	// start command
 	gvCmd, err := NewGvCmd(cmdPath, environment, cmdArgs, uid)
 	if err != nil {
 		return nil, err
@@ -86,11 +88,13 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 	instance.cmd = cmd
 	instance.processErr = err
 
+	// init logger
 	instance.instanceLogger, err = NewInstanceLogger(instance, outPipe, errPipe)
 	if err != nil {
 		return nil, err
 	}
 
+	// wait for process to exit and update process state
 	go func() {
 		if instance.cmd.Process != nil {
 			state, err := instance.cmd.Process.Wait()
@@ -114,6 +118,8 @@ func parseCommand(cmd string) (string, []string) {
 func (i *Instance) Stop() {
 	i.status = InstanceStatusStopping
 	i.lastChange = time.Now()
+	
+	// wait for all http requests to finish
 	go func() {
 		i.connWg.Wait()
 		if i.cmd.Process != nil {
@@ -134,11 +140,13 @@ func (i *Instance) Kill() {
 	}
 }
 
+// Serve registers active http request
 func (i *Instance) Serve() {
 	i.connWg.Add(1)
 	atomic.AddInt32(&i.connCount, 1)
 }
 
+// Done finishes active http request
 func (i *Instance) Done() {
 	i.connWg.Done()
 	atomic.AddInt32(&i.connCount, -1)
@@ -218,6 +226,7 @@ func (i *Instance) checkProcessRunningStatus() int {
 	return InstanceStatusServing
 }
 
+// UpdateStatus is called from app every second for status update
 func (i *Instance) UpdateStatus() int {
 	if i.status == InstanceStatusStarting {
 		status := i.checkProcessStartupStatus()

@@ -115,6 +115,7 @@ func (a *App) startInstanceUpdater() {
 	}()
 }
 
+// reserveInstance reserves active instance for an active http request
 func (a *App) reserveInstance() (*Instance, error) {
 	a.activeInstanceLock.Lock()
 	defer a.activeInstanceLock.Unlock()
@@ -191,6 +192,7 @@ func (a *App) ListenAndServe() error {
 	return http.ListenAndServe(a.externalHostPort, a)
 }
 
+// Report returns report for rpc status commands
 func (a *App) Report(displayN int) string {
 	writer := &bytes.Buffer{}
 	tabWriter := tabwriter.NewWriter(writer, 2, 2, 1, ' ', 0)
