@@ -50,11 +50,16 @@ func NewAppLogger(app *App) *AppLogger {
 		MaxBackups: app.config.Logger.MaxLogsKept,
 	}
 
-	stderrWriter := &lumberjack.Logger{
-		Filename:   app.config.Logger.StderrLogFile,
-		MaxSize:    app.config.Logger.MaxLogSize,
-		MaxAge:     app.config.Logger.MaxLogAge,
-		MaxBackups: app.config.Logger.MaxLogsKept,
+	var stderrWriter io.WriteCloser
+	if app.config.Logger.StdoutLogFile == app.config.Logger.StderrLogFile {
+		stderrWriter = stdoutWriter
+	} else {
+		stderrWriter = &lumberjack.Logger{
+			Filename:   app.config.Logger.StderrLogFile,
+			MaxSize:    app.config.Logger.MaxLogSize,
+			MaxAge:     app.config.Logger.MaxLogAge,
+			MaxBackups: app.config.Logger.MaxLogsKept,
+		}
 	}
 
 	return &AppLogger{
