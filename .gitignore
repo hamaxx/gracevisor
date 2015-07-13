@@ -27,11 +27,14 @@ _testmain.go
 *.sw[pon]
 
 # compiled apps
-demoapp
-gracevisorctl
-gracevisord
+demoapp/demoapp
+gracevisorctl/gracevisorctl
+gracevisord/gracevisord
 
 # log files
 *.out
 *.err
 *.log
+
+# test coverage
+*.html
