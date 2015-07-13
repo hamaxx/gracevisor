@@ -28,12 +28,15 @@ func main() {
 	u, _ := user.Current()
 	fmt.Println("User:", u.Name)
 
+	d, _ := os.Getwd()
+	fmt.Println("Working dir:", d)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		//w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Hello from %d", port)
 		fmt.Printf("New request to %d\n", port)
 	})
-	
+
 	log.Println("This is stderr")
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))

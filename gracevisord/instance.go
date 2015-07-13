@@ -80,7 +80,13 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 	}
 
 	// start command
-	gvCmd, err := NewGvCmd(cmdPath, environment, cmdArgs, uid)
+	gvCmd, err := NewGvCmd(
+		cmdPath,
+		environment,
+		cmdArgs,
+		app.config.Directory,
+		uid,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -25,6 +25,7 @@ apps:
     - name: demo1
       command: ../demoapp/demoapp
       environment: ["PORT={port}"]
+      directory: ../demoapp
       healthcheck: /HealthCheck
       external_host: localhost
       external_port: 8081

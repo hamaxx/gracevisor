@@ -90,6 +90,7 @@ type AppConfig struct {
 	Name        string   `yaml:"name"`
 	Command     string   `yaml:"command"`
 	Environment []string `yaml:"environment"`
+	Directory   string   `yaml:"directory"`
 	HealthCheck string   `yaml:"healthcheck"`
 
 	StopSignal     os.Signal

@@ -25,12 +25,13 @@ type GvCmd struct {
 	Dir  string
 }
 
-func NewGvCmd(path string, env []string, argv []string, uid int) (*GvCmd, error) {
+func NewGvCmd(path string, env []string, argv []string, dir string, uid int) (*GvCmd, error) {
 	gvCmd := &GvCmd{
 		Path: path,
 		Env:  env,
 		Argv: argv,
 		Uid:  uid,
+		Dir:  dir,
 	}
 
 	return gvCmd, nil
