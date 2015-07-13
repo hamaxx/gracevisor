@@ -30,7 +30,7 @@ func startApp(config *Config) {
 	appWg := sync.WaitGroup{}
 	for _, appConfig := range config.Apps {
 		appWg.Add(1)
-		app := NewApp(appConfig, config.Logger, portPool)
+		app := NewApp(appConfig, portPool)
 		runningApps[app.config.Name] = app
 		go func() {
 			if err := app.StartNewInstance(); err != nil {

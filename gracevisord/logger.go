@@ -44,17 +44,17 @@ type AppLogger struct {
 
 func NewAppLogger(app *App) *AppLogger {
 	stdoutWriter := &lumberjack.Logger{
-		Filename:   app.config.StdoutLogFile,
-		MaxSize:    app.loggerConfig.MaxLogSize,
-		MaxAge:     app.loggerConfig.MaxLogAge,
-		MaxBackups: app.loggerConfig.MaxLogsKept,
+		Filename:   app.config.Logger.StdoutLogFile,
+		MaxSize:    app.config.Logger.MaxLogSize,
+		MaxAge:     app.config.Logger.MaxLogAge,
+		MaxBackups: app.config.Logger.MaxLogsKept,
 	}
 
 	stderrWriter := &lumberjack.Logger{
-		Filename:   app.config.StderrLogFile,
-		MaxSize:    app.loggerConfig.MaxLogSize,
-		MaxAge:     app.loggerConfig.MaxLogAge,
-		MaxBackups: app.loggerConfig.MaxLogsKept,
+		Filename:   app.config.Logger.StderrLogFile,
+		MaxSize:    app.config.Logger.MaxLogSize,
+		MaxAge:     app.config.Logger.MaxLogAge,
+		MaxBackups: app.config.Logger.MaxLogsKept,
 	}
 
 	return &AppLogger{

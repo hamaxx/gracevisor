@@ -35,7 +35,7 @@ const (
 	defaultStopSignal = "TERM"
 	defaultMaxRetries = 5
 
-	defaultLogFile     = "/var/log/gracevisor/gracevisor.log"
+	defaultLogFileName = "gracevisor.log"
 	defaultLogDir      = "/var/log/gracevisor"
 	defaultMaxLogSize  = 500
 	defaultLogFileMode = os.FileMode(0600)
@@ -103,10 +103,8 @@ type AppConfig struct {
 	ExternalHost string `yaml:"external_host"`
 	ExternalPort uint32 `yaml:"external_port"`
 
-	StdoutLogFile string `yaml:"stdout_log_file"`
-	StderrLogFile string `yaml:"stderr_log_file"`
-
-	User *UserConfig `yaml:"user"`
+	Logger *LoggerConfig `yaml:"logger"`
+	User   *UserConfig   `yaml:"user"`
 }
 
 func (c *AppConfig) clean(g *Config) error {
@@ -145,27 +143,26 @@ func (c *AppConfig) clean(g *Config) error {
 		c.ExternalPort = defaultExternalPort
 	}
 
-	if c.StdoutLogFile == "" {
-		c.StdoutLogFile = path.Join(g.Logger.ChildLogDir, fmt.Sprintf("app_%s.out", c.Name))
+	if c.Logger == nil {
+		c.Logger = &LoggerConfig{
+			LogDir:      g.Logger.LogDir,
+			MaxLogSize:  g.Logger.MaxLogSize,
+			MaxLogsKept: g.Logger.MaxLogsKept,
+			MaxLogAge:   g.Logger.MaxLogAge,
+		}
 	}
-	if c.StderrLogFile == "" {
-		c.StderrLogFile = path.Join(g.Logger.ChildLogDir, fmt.Sprintf("app_%s.err", c.Name))
-	}
-
-	if err := os.MkdirAll(path.Dir(c.StdoutLogFile), defaultLogFileMode); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Dir(c.StderrLogFile), defaultLogFileMode); err != nil {
+	if err := c.Logger.appClean(g, c); err != nil {
 		return err
 	}
 
 	if c.User == nil {
-		c.User = g.User
-	}
-	if c.User != nil {
-		if err := c.User.clean(g); err != nil {
-			return err
+		c.User = &UserConfig{}
+		if g.User != nil {
+			c.User.UserName = g.User.UserName
 		}
+	}
+	if err := c.User.clean(g); err != nil {
+		return err
 	}
 
 	return nil
@@ -203,25 +200,61 @@ func (c *RpcConfig) clean(g *Config) error {
 }
 
 type LoggerConfig struct {
-	ChildLogDir string `yaml:"child_log_dir"`
-	LogFile     string `yaml:"log_file"`
-	MaxLogSize  int    `yaml:"max_log_size"`
-	MaxLogsKept int    `yaml:"max_logs_kept"`
-	MaxLogAge   int    `yaml:"max_log_age"`
+	LogDir        string `yaml:"log_dir"`
+	LogFile       string `yaml:"log_file"`
+	StdoutLogFile string `yaml:"stdout_log_file"`
+	StderrLogFile string `yaml:"stderr_log_file"`
+
+	MaxLogSize  int `yaml:"max_log_size"`
+	MaxLogsKept int `yaml:"max_logs_kept"`
+	MaxLogAge   int `yaml:"max_log_age"`
 }
 
-func (c *LoggerConfig) clean(g *Config) error {
-	if c.ChildLogDir == "" {
-		c.ChildLogDir = defaultLogDir
+func (c *LoggerConfig) globalClean(g *Config) error {
+	if c.LogDir == "" {
+		c.LogDir = defaultLogDir
 	}
 	if c.LogFile == "" {
-		c.LogFile = defaultLogFile
+		c.LogFile = path.Join(c.LogDir, defaultLogFileName)
 	}
+
 	if c.MaxLogSize <= 0 {
 		c.MaxLogSize = defaultMaxLogSize
 	}
 
 	if err := os.MkdirAll(path.Dir(c.LogFile), defaultLogFileMode); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *LoggerConfig) appClean(g *Config, a *AppConfig) error {
+	if c.LogDir == "" {
+		c.LogDir = g.Logger.LogDir
+	}
+
+	if c.StdoutLogFile == "" {
+		c.StdoutLogFile = path.Join(c.LogDir, fmt.Sprintf("app_%s.out", a.Name))
+	}
+	if c.StderrLogFile == "" {
+		c.StderrLogFile = path.Join(c.LogDir, fmt.Sprintf("app_%s.err", a.Name))
+	}
+
+	if c.MaxLogSize <= 0 {
+		c.MaxLogSize = g.Logger.MaxLogSize
+	}
+	if c.MaxLogsKept == 0 {
+		c.MaxLogsKept = g.Logger.MaxLogsKept
+	}
+	if c.MaxLogAge == 0 {
+		c.MaxLogAge = g.Logger.MaxLogAge
+	}
+
+	if err := os.MkdirAll(path.Dir(c.StdoutLogFile), defaultLogFileMode); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Dir(c.StderrLogFile), defaultLogFileMode); err != nil {
 		return err
 	}
 
@@ -254,7 +287,7 @@ func (c *Config) clean(g *Config) error {
 	if err := c.Rpc.clean(c); err != nil {
 		return err
 	}
-	if err := c.Logger.clean(c); err != nil {
+	if err := c.Logger.globalClean(c); err != nil {
 		return err
 	}
 	if c.User != nil {

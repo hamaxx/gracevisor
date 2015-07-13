@@ -7,8 +7,7 @@ rpc:
     port: 9001
 
 logger:
-    child_log_dir: "../log"
-    log_file: "../log/gracevisor.log"
+    log_dir: "../log"
     max_log_size: 500
     max_logs_kept: -1
     max_log_age: -1
@@ -34,7 +33,8 @@ apps:
       max_retries: 5
       start_timeout: 30
       stop_timeout: 30
-      stdout_log_file: ../log/demo1.out
-      stderr_log_file: ../log/demo1.err
+      logger:
+        stdout_log_file: ../log/demo1.out
+        stderr_log_file: ../log/demo1.err
       user:
         username: domen

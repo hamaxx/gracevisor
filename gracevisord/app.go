@@ -34,7 +34,6 @@ func (v InstanceStatusSort) Less(i, j int) bool {
 
 type App struct {
 	config       *AppConfig
-	loggerConfig *LoggerConfig
 
 	instances          []*Instance
 	activeInstance     *Instance
@@ -50,10 +49,9 @@ type App struct {
 	appLogger *AppLogger
 }
 
-func NewApp(config *AppConfig, loggerConfig *LoggerConfig, portPool *PortPool) *App {
+func NewApp(config *AppConfig, portPool *PortPool) *App {
 	app := &App{
 		config:           config,
-		loggerConfig:     loggerConfig,
 		instances:        make([]*Instance, 0, 10),
 		portPool:         portPool,
 		externalHostPort: fmt.Sprintf("%s:%d", config.ExternalHost, config.ExternalPort),

@@ -74,18 +74,13 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		environment = append(environment, parsePortBadge(env, port))
 	}
 
-	uid := 0
-	if app.config.User != nil {
-		uid = app.config.User.Uid
-	}
-
 	// start command
 	gvCmd, err := NewGvCmd(
 		cmdPath,
 		environment,
 		cmdArgs,
 		app.config.Directory,
-		uid,
+		app.config.User.Uid,
 	)
 	if err != nil {
 		return nil, err
