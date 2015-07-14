@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -11,8 +10,9 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
-	"text/tabwriter"
 	"time"
+
+	"github.com/hamaxx/gracevisor/common/report"
 )
 
 var (
@@ -191,20 +191,11 @@ func (a *App) ListenAndServe() error {
 }
 
 // Report returns report for rpc status commands
-func (a *App) Report(displayN int) string {
-	writer := &bytes.Buffer{}
-	tabWriter := tabwriter.NewWriter(writer, 2, 2, 1, ' ', 0)
-	writeColumn := func(s string, f ...interface{}) {
-		if _, err := tabWriter.Write([]byte(fmt.Sprintf(s, f...))); err != nil {
-			log.Print(err)
-		}
-		if _, err := tabWriter.Write([]byte("\t")); err != nil {
-			log.Print(err)
-		}
-	}
-
-	if _, err := tabWriter.Write([]byte(fmt.Sprintf("[%s/%s]\n", a.config.Name, a.externalHostPort))); err != nil {
-		log.Print(err)
+func (a *App) Report(displayN int) *report.App {
+	appReport := &report.App{
+		Name: a.config.Name,
+		Host: a.config.ExternalHost,
+		Port: a.config.ExternalPort,
 	}
 
 	from := 0
@@ -215,40 +206,9 @@ func (a *App) Report(displayN int) string {
 	sort.Stable(InstanceStatusSort(a.instances))
 
 	for _, instance := range a.instances[from:len(a.instances)] {
-		if instance == a.activeInstance {
-			writeColumn(" *")
-		} else {
-			writeColumn("")
-		}
-		writeColumn("%d/%s", instance.id, instance.internalHostPort)
-		switch instance.status {
-		case InstanceStatusServing:
-			writeColumn("serving")
-		case InstanceStatusStarting:
-			writeColumn("starting")
-		case InstanceStatusStopping:
-			writeColumn("stopping")
-		case InstanceStatusStopped:
-			writeColumn("stopped")
-		case InstanceStatusKilled:
-			writeColumn("killed")
-		case InstanceStatusFailed:
-			writeColumn("failed")
-		case InstanceStatusExited:
-			writeColumn("exited")
-		case InstanceStatusTimedOut:
-			writeColumn("timed out")
-		}
-		writeColumn("%s", time.Since(instance.lastChange)/time.Second*time.Second)
-		if instance.processErr != nil {
-			writeColumn("%q", instance.processErr)
-		}
-		if _, err := tabWriter.Write([]byte("\n")); err != nil {
-			log.Print(err)
-		}
+		instanceReport := instance.Report()
+		appReport.Instances = append(appReport.Instances, instanceReport)
 	}
-	if err := tabWriter.Flush(); err != nil {
-		log.Print(err)
-	}
-	return writer.String()
+
+	return appReport
 }

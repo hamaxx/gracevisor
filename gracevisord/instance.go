@@ -11,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hamaxx/gracevisor/common/report"
 )
 
 const (
@@ -249,4 +251,43 @@ func (i *Instance) UpdateStatus() int {
 		}
 	}
 	return i.status
+}
+
+func (i *Instance) StatusString() string {
+	switch i.status {
+	case InstanceStatusServing:
+		return "serving"
+	case InstanceStatusStarting:
+		return "starting"
+	case InstanceStatusStopping:
+		return "stopping"
+	case InstanceStatusStopped:
+		return "stopped"
+	case InstanceStatusKilled:
+		return "killed"
+	case InstanceStatusFailed:
+		return "failed"
+	case InstanceStatusExited:
+		return "exited"
+	case InstanceStatusTimedOut:
+		return "timed out"
+	}
+	return ""
+}
+
+func (i *Instance) Report() *report.Instance {
+	instanceReport := &report.Instance{
+		Id:                i.id,
+		Active:            i == i.app.activeInstance,
+		Host:              i.internalHost,
+		Port:              i.internalPort,
+		Status:            i.StatusString(),
+		SinceStatusChange: uint64(time.Since(i.lastChange) / time.Second),
+	}
+
+	if i.processErr != nil {
+		instanceReport.Error = i.processErr.Error()
+	}
+
+	return instanceReport
 }
