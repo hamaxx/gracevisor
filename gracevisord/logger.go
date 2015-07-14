@@ -44,17 +44,22 @@ type AppLogger struct {
 
 func NewAppLogger(app *App) *AppLogger {
 	stdoutWriter := &lumberjack.Logger{
-		Filename:   app.config.StdoutLogFile,
-		MaxSize:    app.loggerConfig.MaxLogSize,
-		MaxAge:     app.loggerConfig.MaxLogAge,
-		MaxBackups: app.loggerConfig.MaxLogsKept,
+		Filename:   app.config.Logger.StdoutLogFile,
+		MaxSize:    app.config.Logger.MaxLogSize,
+		MaxAge:     app.config.Logger.MaxLogAge,
+		MaxBackups: app.config.Logger.MaxLogsKept,
 	}
 
-	stderrWriter := &lumberjack.Logger{
-		Filename:   app.config.StderrLogFile,
-		MaxSize:    app.loggerConfig.MaxLogSize,
-		MaxAge:     app.loggerConfig.MaxLogAge,
-		MaxBackups: app.loggerConfig.MaxLogsKept,
+	var stderrWriter io.WriteCloser
+	if app.config.Logger.StdoutLogFile == app.config.Logger.StderrLogFile {
+		stderrWriter = stdoutWriter
+	} else {
+		stderrWriter = &lumberjack.Logger{
+			Filename:   app.config.Logger.StderrLogFile,
+			MaxSize:    app.config.Logger.MaxLogSize,
+			MaxAge:     app.config.Logger.MaxLogAge,
+			MaxBackups: app.config.Logger.MaxLogsKept,
+		}
 	}
 
 	return &AppLogger{
@@ -66,14 +71,14 @@ func NewAppLogger(app *App) *AppLogger {
 
 func (al *AppLogger) logStdout(logLine *LogLine) {
 	if err := logLine.WriteTo(al.stdoutWriter); err != nil {
-		log.Print("Stdout write error:", err)
+		log.Print(al.app.config.Name, ": Stdout write error:", err)
 	}
 	logLinePool.Put(logLine)
 }
 
 func (al *AppLogger) logStderr(logLine *LogLine) {
 	if err := logLine.WriteTo(al.stderrWriter); err != nil {
-		log.Print("Stderr write error:", err)
+		log.Print(al.app.config.Name, ": Stderr write error:", err)
 	}
 
 	logLinePool.Put(logLine)
@@ -102,7 +107,7 @@ func (il *InstanceLogger) lineReader(pipe io.ReadCloser, writer func(*LogLine)) 
 			if err == io.EOF {
 				return
 			} else if err != nil {
-				log.Print("Read Error:", err)
+				log.Print(il.instance.app.config.Name, ": Read Error:", err)
 				return
 			}
 			if len(line) > 0 && line[len(line)-1] == '\n' {
@@ -113,7 +118,7 @@ func (il *InstanceLogger) lineReader(pipe io.ReadCloser, writer func(*LogLine)) 
 			}
 			ll, err := il.newLogLine(line)
 			if err != nil {
-				log.Print("Log write error:", err)
+				log.Print(il.instance.app.config.Name, ": Log write error:", err)
 				continue
 			}
 			writer(ll)

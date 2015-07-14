@@ -25,3 +25,16 @@ _testmain.go
 
 # vim
 *.sw[pon]
+
+# compiled apps
+demoapp/demoapp
+gracevisorctl/gracevisorctl
+gracevisord/gracevisord
+
+# log files
+*.out
+*.err
+*.log
+
+# test coverage
+*.html

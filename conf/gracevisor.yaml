@@ -7,26 +7,24 @@ rpc:
     port: 9001
 
 logger:
-    child_log_dir: "/var/log/gracevisor"
-    log_file: "/var/log/gracevisor/gracevisor.log"
+    log_dir: "../log"
     max_log_size: 500
     max_logs_kept: -1
     max_log_age: -1
 
+user:
+    username: root
+
+apps_include: ["../conf"]
+
 apps:
     - name: demo
       command: ../demoapp/demoapp --port={port}
-      healthcheck: /HealthCheck
-      external_host: localhost
-      external_port: 8080
-      internal_host: localhost
-      stop_signal: TERM
-      max_retries: 5
-      start_timeout: 30
-      stop_timeout: 30
 
     - name: demo1
-      command: ../demoapp/demoapp --port={port}
+      command: ../demoapp/demoapp
+      environment: ["PORT={port}"]
+      directory: ../demoapp
       healthcheck: /HealthCheck
       external_host: localhost
       external_port: 8081
@@ -35,5 +33,8 @@ apps:
       max_retries: 5
       start_timeout: 30
       stop_timeout: 30
+      logger:
+        stdout_log_file: ../log/demo1.out
+        stderr_log_file: ../log/demo1.err
       user:
-        username: ham
+        username: domen

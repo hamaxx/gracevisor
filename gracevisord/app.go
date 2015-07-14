@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"text/tabwriter"
@@ -19,9 +20,20 @@ var (
 	ErrInstanceNotRunning = errors.New("Instance is not running")
 )
 
+type InstanceStatusSort []*Instance
+
+func (v InstanceStatusSort) Len() int {
+	return len(v)
+}
+func (v InstanceStatusSort) Swap(i, j int) {
+	v[i], v[j] = v[j], v[i]
+}
+func (v InstanceStatusSort) Less(i, j int) bool {
+	return v[i].status > v[j].status
+}
+
 type App struct {
-	config       *AppConfig
-	loggerConfig *LoggerConfig
+	config *AppConfig
 
 	instances          []*Instance
 	activeInstance     *Instance
@@ -37,10 +49,9 @@ type App struct {
 	appLogger *AppLogger
 }
 
-func NewApp(config *AppConfig, loggerConfig *LoggerConfig, portPool *PortPool) *App {
+func NewApp(config *AppConfig, portPool *PortPool) *App {
 	app := &App{
 		config:           config,
-		loggerConfig:     loggerConfig,
 		instances:        make([]*Instance, 0, 10),
 		portPool:         portPool,
 		externalHostPort: fmt.Sprintf("%s:%d", config.ExternalHost, config.ExternalPort),
@@ -102,16 +113,16 @@ func (a *App) startInstanceUpdater() {
 	}()
 }
 
+// reserveInstance reserves active instance for an active http request
 func (a *App) reserveInstance() (*Instance, error) {
 	a.activeInstanceLock.Lock()
+	defer a.activeInstanceLock.Unlock()
 
 	instance := a.activeInstance
 	if instance == nil {
 		return nil, ErrNoActiveInstances
 	}
 	instance.Serve()
-
-	a.activeInstanceLock.Unlock()
 
 	return instance, nil
 }
@@ -179,6 +190,7 @@ func (a *App) ListenAndServe() error {
 	return http.ListenAndServe(a.externalHostPort, a)
 }
 
+// Report returns report for rpc status commands
 func (a *App) Report(displayN int) string {
 	writer := &bytes.Buffer{}
 	tabWriter := tabwriter.NewWriter(writer, 2, 2, 1, ' ', 0)
@@ -199,6 +211,8 @@ func (a *App) Report(displayN int) string {
 	if len(a.instances) > displayN {
 		from = len(a.instances) - displayN
 	}
+
+	sort.Stable(InstanceStatusSort(a.instances))
 
 	for _, instance := range a.instances[from:len(a.instances)] {
 		if instance == a.activeInstance {

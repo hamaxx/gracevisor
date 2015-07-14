@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -27,10 +26,7 @@ const (
 
 const (
 	HealthCheckTimeout = 1
-)
-
-var (
-	ErrInvalidStopSignal = errors.New("Invalid stop signal")
+	PortBadge          = "{port}"
 )
 
 type Instance struct {
@@ -38,7 +34,7 @@ type Instance struct {
 	id  uint32
 
 	internalHost     string
-	internalPort     uint32
+	internalPort     uint16
 	internalHostPort string
 	status           int
 	lastChange       time.Time
@@ -59,8 +55,6 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		return nil, err
 	}
 
-	cmdPath, cmdArgs := parseCommand(app.config.Command, port)
-
 	instance := &Instance{
 		id:               id,
 		app:              app,
@@ -72,7 +66,22 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		lastChange:       time.Now(),
 	}
 
-	gvCmd, err := NewGvCmd(cmdPath, []string{}, cmdArgs, app.config.User)
+	// prepare command arguments
+	cmdPath, cmdArgs := parseCommand(parsePortBadge(app.config.Command, port))
+
+	environment := make([]string, 0, len(app.config.Environment))
+	for _, env := range app.config.Environment {
+		environment = append(environment, parsePortBadge(env, port))
+	}
+
+	// start command
+	gvCmd, err := NewGvCmd(
+		cmdPath,
+		environment,
+		cmdArgs,
+		app.config.Directory,
+		app.config.User.Uid,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -80,11 +89,13 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 	instance.cmd = cmd
 	instance.processErr = err
 
+	// init logger
 	instance.instanceLogger, err = NewInstanceLogger(instance, outPipe, errPipe)
 	if err != nil {
 		return nil, err
 	}
 
+	// wait for process to exit and update process state
 	go func() {
 		if instance.cmd.Process != nil {
 			state, err := instance.cmd.Process.Wait()
@@ -96,24 +107,24 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 	return instance, nil
 }
 
-func parseCommand(cmd string, port uint32) (string, []string) {
-	withPort := strings.Replace(cmd, "{port}", fmt.Sprint(port), -1)
-	command := strings.Split(withPort, " ")
+func parsePortBadge(input string, port uint16) string {
+	return strings.Replace(input, PortBadge, fmt.Sprint(port), -1)
+}
+
+func parseCommand(cmd string) (string, []string) {
+	command := strings.Split(cmd, " ")
 	return command[0], command
 }
 
 func (i *Instance) Stop() {
 	i.status = InstanceStatusStopping
 	i.lastChange = time.Now()
+
+	// wait for all http requests to finish
 	go func() {
 		i.connWg.Wait()
 		if i.cmd.Process != nil {
-			signal, ok := Signals[i.app.config.StopSignal]
-			if !ok {
-				log.Print(ErrInvalidStopSignal)
-				return
-			}
-			if err := i.cmd.Process.Signal(signal); err != nil {
+			if err := i.cmd.Process.Signal(i.app.config.StopSignal); err != nil {
 				log.Print("Stop signal error:", err)
 				return
 			}
@@ -130,11 +141,13 @@ func (i *Instance) Kill() {
 	}
 }
 
+// Serve registers active http request
 func (i *Instance) Serve() {
 	i.connWg.Add(1)
 	atomic.AddInt32(&i.connCount, 1)
 }
 
+// Done finishes active http request
 func (i *Instance) Done() {
 	i.connWg.Done()
 	atomic.AddInt32(&i.connCount, -1)
@@ -164,11 +177,11 @@ func (i *Instance) healthCheck() bool {
 
 func (i *Instance) checkProcessStartupStatus() int {
 	if i.processExitState != nil || i.processErr != nil {
-		log.Print("aa", i.processErr, i.processExitState)
+		log.Print("Process exited on startup", i.processErr, i.processExitState)
 		return InstanceStatusFailed
 	}
 
-	if i.app.config.StopTimeout > 0 && time.Since(i.lastChange) > time.Duration(i.app.config.StartTimeout)*time.Second {
+	if i.app.config.StartTimeout > 0 && time.Since(i.lastChange) > time.Duration(i.app.config.StartTimeout)*time.Second {
 		if i.cmd.Process != nil {
 			i.processErr = i.cmd.Process.Kill()
 		}
@@ -214,6 +227,7 @@ func (i *Instance) checkProcessRunningStatus() int {
 	return InstanceStatusServing
 }
 
+// UpdateStatus is called from app every second for status update
 func (i *Instance) UpdateStatus() int {
 	if i.status == InstanceStatusStarting {
 		status := i.checkProcessStartupStatus()
