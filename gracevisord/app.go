@@ -29,7 +29,12 @@ func (v InstanceStatusSort) Swap(i, j int) {
 	v[i], v[j] = v[j], v[i]
 }
 func (v InstanceStatusSort) Less(i, j int) bool {
-	return v[i].status > v[j].status
+	// only bring serving, starting and stopping apps to display
+	// leave order of others unchanged
+	if v[i].status <= InstanceStatusStopping || v[j].status <= InstanceStatusStopping {
+		return v[i].status > v[j].status
+	}
+	return false
 }
 
 type App struct {
