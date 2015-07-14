@@ -255,6 +255,20 @@ func TestLoggerAppClean(t *testing.T) {
 		t.Error("Incorrect default stderr log file set:", loggerConfig.StderrLogFile)
 	}
 
+	loggerConfig.StdoutLogFile = ""
+	loggerConfig.StderrLogFile = ""
+	loggerConfig.LogFile = "/tmp/log-test/demo.log"
+	if err := loggerConfig.appClean(config, appConfig); err != nil {
+		t.Error("App clean failed:", err)
+	}
+
+	if loggerConfig.StdoutLogFile != loggerConfig.LogFile {
+		t.Error("StdoutLogFile should be set to LogFile.")
+	}
+	if loggerConfig.StderrLogFile != loggerConfig.LogFile {
+		t.Error("StderrLogFile should be set to LogFile.")
+	}
+
 	if _, err := os.Stat("/tmp/log-test/"); err != nil {
 		t.Error("LoggerConfig.appClean did not create dir:", err)
 	}

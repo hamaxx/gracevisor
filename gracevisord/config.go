@@ -235,10 +235,18 @@ func (c *LoggerConfig) appClean(g *Config, a *AppConfig) error {
 	}
 
 	if c.StdoutLogFile == "" {
-		c.StdoutLogFile = path.Join(c.LogDir, fmt.Sprintf("app_%s.out", a.Name))
+		if c.LogFile != "" {
+			c.StdoutLogFile = c.LogFile
+		} else {
+			c.StdoutLogFile = path.Join(c.LogDir, fmt.Sprintf("app_%s.out", a.Name))
+		}
 	}
 	if c.StderrLogFile == "" {
-		c.StderrLogFile = path.Join(c.LogDir, fmt.Sprintf("app_%s.err", a.Name))
+		if c.LogFile != "" {
+			c.StderrLogFile = c.LogFile
+		} else {
+			c.StderrLogFile = path.Join(c.LogDir, fmt.Sprintf("app_%s.err", a.Name))
+		}
 	}
 
 	if c.MaxLogSize <= 0 {
