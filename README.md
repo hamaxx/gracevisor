@@ -73,21 +73,21 @@ apps:
       command: ../demoapp/demoapp --port={port}
 ```
 
-### port_range
+### port_range:
 port_range specifies the range of ports for internal use for applications. Default range is from *10000* to *11000*.
 
 Options:
 - **from:** Lower bound of port range.
 - **to:** Upper bound of port range.
 
-### rpc
+### rpc:
 rpc specifies options for rpc server.
 
 Options:
 - **host:** Rpc server hostname. Default is *localhost*.
 - **port:** Rpc server port. Default is *9001*.
 
-### logger
+### logger:
 logger specifies global logger settings.
 
 Options:
@@ -160,6 +160,13 @@ Options:
   - **stdout_log_file**: Log file for *stdout*. This is a path relative to gracevisord working dir not **log_dir**.
 
   - **stderr_log_file**: Log file for *stderr*. This is a path relative to gracevisord working dir not **log_dir**.
+
+  - **max_log_size:** Max size for log files (in megabytes). If not specified this option will be inherited from global logger config.
+
+  - **max_logs_kept:** Maximum number of logs to be kept after log rotation. If not specified this option will be inherited from global logger config.
+
+  - **max_log_age:** Maximum log age before rotating it. If not specified this option will be inherited from global logger config.
+
 
 ## TODO
 
