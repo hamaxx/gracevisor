@@ -25,12 +25,12 @@ var (
 const (
 	configFile = "gracevisor.yaml"
 
-	defaultPortFrom = uint32(10000)
-	defaultPortTo   = uint32(11000)
+	defaultPortFrom = uint16(10000)
+	defaultPortTo   = uint16(11000)
 
 	defaultHost         = "localhost"
-	defaultRpcPort      = uint32(9001)
-	defaultExternalPort = uint32(8080)
+	defaultRpcPort      = uint16(9001)
+	defaultExternalPort = uint16(8080)
 
 	defaultStopSignal = "TERM"
 	defaultMaxRetries = 5
@@ -69,8 +69,8 @@ func (c *UserConfig) clean(g *Config) error {
 }
 
 type InternalPortsConfig struct {
-	From uint32 `yaml:"from"`
-	To   uint32 `yaml:"to"`
+	From uint16 `yaml:"from"`
+	To   uint16 `yaml:"to"`
 }
 
 func (c *InternalPortsConfig) clean(g *Config) error {
@@ -101,7 +101,7 @@ type AppConfig struct {
 
 	InternalHost string `yaml:"internal_host"`
 	ExternalHost string `yaml:"external_host"`
-	ExternalPort uint32 `yaml:"external_port"`
+	ExternalPort uint16 `yaml:"external_port"`
 
 	Logger *LoggerConfig `yaml:"logger"`
 	User   *UserConfig   `yaml:"user"`
@@ -184,7 +184,7 @@ func (c *AppConfig) hasPortBadge() bool {
 
 type RpcConfig struct {
 	Host string `yaml:"host"`
-	Port uint32 `yaml:"port"`
+	Port uint16 `yaml:"port"`
 }
 
 func (c *RpcConfig) clean(g *Config) error {
@@ -304,7 +304,7 @@ func (c *Config) clean(g *Config) error {
 		}
 	}
 
-	usedPorts := make(map[uint32]bool)
+	usedPorts := make(map[uint16]bool)
 	usedNames := make(map[string]bool)
 	for _, app := range c.Apps {
 		if err := app.clean(c); err != nil {

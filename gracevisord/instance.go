@@ -34,7 +34,7 @@ type Instance struct {
 	id  uint32
 
 	internalHost     string
-	internalPort     uint32
+	internalPort     uint16
 	internalHostPort string
 	status           int
 	lastChange       time.Time
@@ -107,7 +107,7 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 	return instance, nil
 }
 
-func parsePortBadge(input string, port uint32) string {
+func parsePortBadge(input string, port uint16) string {
 	return strings.Replace(input, PortBadge, fmt.Sprint(port), -1)
 }
 

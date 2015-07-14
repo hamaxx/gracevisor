@@ -33,7 +33,7 @@ func (v InstanceStatusSort) Less(i, j int) bool {
 }
 
 type App struct {
-	config       *AppConfig
+	config *AppConfig
 
 	instances          []*Instance
 	activeInstance     *Instance

@@ -8,29 +8,29 @@ import (
 var ErrNoAvailablePorts = errors.New("No available ports")
 
 type PortPool struct {
-	portStart uint32
-	portEnd   uint32
+	portStart uint16
+	portEnd   uint16
 
-	current uint32
+	current uint16
 	mu      sync.Mutex
 
-	usedPorts map[uint32]struct{}
+	usedPorts map[uint16]struct{}
 }
 
-func NewPortPool(start, end uint32) *PortPool {
+func NewPortPool(start, end uint16) *PortPool {
 	return &PortPool{
 		portStart: start,
 		portEnd:   end,
 		current:   start - 1,
-		usedPorts: make(map[uint32]struct{}, end-start),
+		usedPorts: make(map[uint16]struct{}, end-start),
 	}
 }
 
-func (p *PortPool) ReserveNewPort() (uint32, error) {
+func (p *PortPool) ReserveNewPort() (uint16, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	for i := uint32(0); i < p.portEnd-p.portStart; i++ {
+	for i := uint16(0); i < p.portEnd-p.portStart; i++ {
 		p.current = (p.current + 1) % (p.portEnd - p.portStart)
 		port := p.portStart + p.current
 
@@ -43,7 +43,7 @@ func (p *PortPool) ReserveNewPort() (uint32, error) {
 	return 0, ErrNoAvailablePorts
 }
 
-func (p *PortPool) ReleasePort(port uint32) {
+func (p *PortPool) ReleasePort(port uint16) {
 	p.mu.Lock()
 	delete(p.usedPorts, port)
 	p.mu.Unlock()
