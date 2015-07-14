@@ -10,6 +10,9 @@ import (
 	"github.com/hamaxx/gracevisor/deps/lumberjack"
 )
 
+var version = "dev"
+var commit = ""
+
 var defaultConfigDir = "/etc/gracevisor/"
 
 func configureGracevisorLogger(config *LoggerConfig) {
@@ -65,7 +68,7 @@ func main() {
 	app.Name = "gracevisord"
 	app.Usage = "gracevisor daemon"
 	app.Email = "jure@hamsworld.net"
-	app.Version = "0.0.1"
+	app.Version = version
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "conf",
