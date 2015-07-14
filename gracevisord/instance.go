@@ -181,7 +181,7 @@ func (i *Instance) checkProcessStartupStatus() int {
 		return InstanceStatusFailed
 	}
 
-	if i.app.config.StopTimeout > 0 && time.Since(i.lastChange) > time.Duration(i.app.config.StartTimeout)*time.Second {
+	if i.app.config.StartTimeout > 0 && time.Since(i.lastChange) > time.Duration(i.app.config.StartTimeout)*time.Second {
 		if i.cmd.Process != nil {
 			i.processErr = i.cmd.Process.Kill()
 		}
