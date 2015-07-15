@@ -177,8 +177,7 @@ Options:
 ## TODO
 
 - apps management: reload config, remove, add
-- daemonize gracevisord (maybe it would be easier to just write systemd/upstart/... scripts)
-- install script
+- init scripts for systemd and init.d
 - docs
 - **tests**
 - ...
