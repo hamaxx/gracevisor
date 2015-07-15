@@ -109,6 +109,8 @@ make_dir_tree() {
         echo "Failed to create upstart directory -- aborting."
         cleanup_exit 1
     fi
+
+    rm packages/*.{deb,rpm,gz}
 }
 
 if [ $# -ne 1 ]; then
@@ -204,7 +206,7 @@ if [ "x$response" == "xy" ]; then
             filename=`echo $filename | sed s/$VERSION/nightly/`
             filename=`echo $filename | sed s/$VERSION_UNDERSCORED/nightly/`
         fi
-        AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath s3://hamax-test/$filename --acl public-read --region us-east-1
+        AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath s3://gracevisor/$filename --acl public-read --region us-east-1
         if [ $? -ne 0 ]; then
             echo "Upload failed -- aborting".
             cleanup_exit 1
