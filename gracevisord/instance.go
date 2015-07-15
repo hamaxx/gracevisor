@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/hamaxx/gracevisor/common/report"
@@ -68,28 +69,39 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		lastChange:       time.Now(),
 	}
 
-	// prepare command arguments
 	cmdPath, cmdArgs := parseCommand(parsePortBadge(app.config.Command, port))
 
-	environment := make([]string, 0, len(app.config.Environment))
+	cmd := exec.Command(cmdPath, cmdArgs...)
+	cmd.Dir = app.config.Directory
+
 	for _, env := range app.config.Environment {
-		environment = append(environment, parsePortBadge(env, port))
+		cmd.Env = append(cmd.Env, parsePortBadge(env, port))
 	}
 
-	// start command
-	gvCmd, err := NewGvCmd(
-		cmdPath,
-		environment,
-		cmdArgs,
-		app.config.Directory,
-		app.config.User.Uid,
-	)
+	// set credentials for setting uid
+	if app.config.User.Uid != 0 {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Credential: &syscall.Credential{
+				Uid: app.config.User.Uid,
+			},
+		}
+	}
+
+	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-	cmd, outPipe, errPipe, err := gvCmd.start()
+	errPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return nil, err
+	}
+
 	instance.cmd = cmd
-	instance.processErr = err
 
 	// init logger
 	instance.instanceLogger, err = NewInstanceLogger(instance, outPipe, errPipe)
@@ -115,7 +127,7 @@ func parsePortBadge(input string, port uint16) string {
 
 func parseCommand(cmd string) (string, []string) {
 	command := strings.Split(cmd, " ")
-	return command[0], command
+	return command[0], command[1:]
 }
 
 func (i *Instance) Stop() {

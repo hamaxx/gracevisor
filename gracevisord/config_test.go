@@ -20,7 +20,7 @@ func TestUserClean(t *testing.T) {
 	}
 
 	currentUserId, _ := strconv.Atoi(currentUser.Uid)
-	if userConfig.Uid != currentUserId {
+	if userConfig.Uid != uint32(currentUserId) {
 		t.Error("Incorrect user id")
 	}
 
