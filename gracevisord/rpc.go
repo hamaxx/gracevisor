@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/rpc"
 	"sort"
+
+	"github.com/hamaxx/gracevisor/common/report"
 )
 
 var ErrInvalidApp = errors.New("Invalid app")
@@ -58,13 +60,13 @@ func (r *Rpc) Kill(appName string, res *string) error {
 	return app.StopInstances(-1, true)
 }
 
-func (r *Rpc) Status(appName string, res *string) error {
+func (r *Rpc) Status(appName string, res *[]*report.App) error {
 	if appName != "" {
 		app, ok := r.runningApps[appName]
 		if !ok {
 			return ErrInvalidApp
 		}
-		*res = app.Report(10)
+		*res = append(*res, app.Report(10))
 	} else {
 		sortedApps := []*App{}
 		for _, app := range r.runningApps {
@@ -72,7 +74,7 @@ func (r *Rpc) Status(appName string, res *string) error {
 		}
 		sort.Sort(AppNameSort(sortedApps))
 		for _, app := range sortedApps {
-			*res += app.Report(3)
+			*res = append(*res, app.Report(3))
 		}
 	}
 	return nil

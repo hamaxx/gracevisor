@@ -10,7 +10,10 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
+
+	"github.com/hamaxx/gracevisor/common/report"
 )
 
 const (
@@ -66,28 +69,39 @@ func NewInstance(app *App, id uint32) (*Instance, error) {
 		lastChange:       time.Now(),
 	}
 
-	// prepare command arguments
 	cmdPath, cmdArgs := parseCommand(parsePortBadge(app.config.Command, port))
 
-	environment := make([]string, 0, len(app.config.Environment))
+	cmd := exec.Command(cmdPath, cmdArgs...)
+	cmd.Dir = app.config.Directory
+
 	for _, env := range app.config.Environment {
-		environment = append(environment, parsePortBadge(env, port))
+		cmd.Env = append(cmd.Env, parsePortBadge(env, port))
 	}
 
-	// start command
-	gvCmd, err := NewGvCmd(
-		cmdPath,
-		environment,
-		cmdArgs,
-		app.config.Directory,
-		app.config.User.Uid,
-	)
+	// set credentials for setting uid
+	if app.config.User.Uid != 0 {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Credential: &syscall.Credential{
+				Uid: app.config.User.Uid,
+			},
+		}
+	}
+
+	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-	cmd, outPipe, errPipe, err := gvCmd.start()
+	errPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return nil, err
+	}
+
 	instance.cmd = cmd
-	instance.processErr = err
 
 	// init logger
 	instance.instanceLogger, err = NewInstanceLogger(instance, outPipe, errPipe)
@@ -113,7 +127,7 @@ func parsePortBadge(input string, port uint16) string {
 
 func parseCommand(cmd string) (string, []string) {
 	command := strings.Split(cmd, " ")
-	return command[0], command
+	return command[0], command[1:]
 }
 
 func (i *Instance) Stop() {
@@ -249,4 +263,43 @@ func (i *Instance) UpdateStatus() int {
 		}
 	}
 	return i.status
+}
+
+func (i *Instance) StatusString() string {
+	switch i.status {
+	case InstanceStatusServing:
+		return "serving"
+	case InstanceStatusStarting:
+		return "starting"
+	case InstanceStatusStopping:
+		return "stopping"
+	case InstanceStatusStopped:
+		return "stopped"
+	case InstanceStatusKilled:
+		return "killed"
+	case InstanceStatusFailed:
+		return "failed"
+	case InstanceStatusExited:
+		return "exited"
+	case InstanceStatusTimedOut:
+		return "timed out"
+	}
+	return ""
+}
+
+func (i *Instance) Report() *report.Instance {
+	instanceReport := &report.Instance{
+		Id:                i.id,
+		Active:            i == i.app.activeInstance,
+		Host:              i.internalHost,
+		Port:              i.internalPort,
+		Status:            i.StatusString(),
+		SinceStatusChange: uint64(time.Since(i.lastChange) / time.Second),
+	}
+
+	if i.processErr != nil {
+		instanceReport.Error = i.processErr.Error()
+	}
+
+	return instanceReport
 }

@@ -59,8 +59,6 @@ func startApp(config *Config) {
 }
 
 func main() {
-	MaybeBecomeChildProcess()
-
 	// solution for https://github.com/golang/go/issues/6785
 	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
 

@@ -45,7 +45,7 @@ type UserConfig struct {
 	UserName string `yaml:"username"`
 	// GroupName string `yaml:"groupname"` TODO when os package will support group lookup
 
-	Uid int
+	Uid uint32
 }
 
 func (c *UserConfig) clean(g *Config) error {
@@ -58,12 +58,12 @@ func (c *UserConfig) clean(g *Config) error {
 		return err
 	}
 
-	uid, err := strconv.Atoi(user.Uid)
+	uid, err := strconv.ParseUint(user.Uid, 10, 32)
 	if err != nil {
 		return ErrInvalidUserId
 	}
 
-	c.Uid = uid
+	c.Uid = uint32(uid)
 
 	return nil
 }
