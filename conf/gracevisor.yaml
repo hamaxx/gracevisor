@@ -37,4 +37,4 @@ apps:
         stdout_log_file: ../log/demo1.out
         stderr_log_file: ../log/demo1.err
       user:
-        username: domen
+        username: ham

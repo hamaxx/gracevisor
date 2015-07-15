@@ -26,6 +26,12 @@ At the moment we're building a proof of concept. It's not ready for production y
 
 ## I know it doesn't work yet, but I still want to try it out
 
+Nightly binary packages (only supports upstart init service at the moment)
+
+- [deb x86_64](https://s3.amazonaws.com/hamax-test/gracevisor_nightly_amd64.deb)
+- [rpm x86_64](https://s3.amazonaws.com/hamax-test/gracevisor-nightly-1.x86_64.rpm)
+- [tar.gz x86_64](https://s3.amazonaws.com/hamax-test/gracevisor_nightly_x86_64.tar.gz)
+
 Build and install gracevisor
 
     go get github.com/hamaxx/gracevisor/{gracevisord,gracevisorctl}

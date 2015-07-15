@@ -17,6 +17,9 @@ const (
 	defaultPort = 9001
 )
 
+var version = "dev"
+var commit = ""
+
 func getRpcClient(c *cli.Context) *rpc.Client {
 	client, err := rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d", c.GlobalString("host"), c.GlobalInt("port")))
 	if err != nil {
@@ -72,7 +75,7 @@ func main() {
 	app.Name = "gracevisorctl"
 	app.Usage = "Manage gracevisord"
 	app.Email = "jure@hamsworld.net"
-	app.Version = "0.0.1"
+	app.Version = version
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "host",
