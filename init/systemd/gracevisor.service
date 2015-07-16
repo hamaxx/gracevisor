@@ -1,0 +1,10 @@
+[Unit]
+Description=Gracevisor - a process control system built for the web
+
+[Service]
+ExecStart=/usr/sbin/gracevisord --conf /etc/gracevisor/
+Type=simple
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
