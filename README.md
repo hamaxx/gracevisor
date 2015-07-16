@@ -28,9 +28,9 @@ At the moment we're building a proof of concept. It's not ready for production y
 
 Nightly binary packages (only supports upstart init service at the moment)
 
-- [deb x86_64](https://s3.amazonaws.com/hamax-test/gracevisor_nightly_amd64.deb)
-- [rpm x86_64](https://s3.amazonaws.com/hamax-test/gracevisor-nightly-1.x86_64.rpm)
-- [tar.gz x86_64](https://s3.amazonaws.com/hamax-test/gracevisor_nightly_x86_64.tar.gz)
+- [deb x86_64](https://s3.amazonaws.com/gracevisor/gracevisor_nightly_amd64.deb)
+- [rpm x86_64](https://s3.amazonaws.com/gracevisor/gracevisor-nightly-1.x86_64.rpm)
+- [tar.gz x86_64](https://s3.amazonaws.com/gracevisor/gracevisor_nightly_x86_64.tar.gz)
 
 Build and install gracevisor
 
@@ -177,8 +177,7 @@ Options:
 ## TODO
 
 - apps management: reload config, remove, add
-- daemonize gracevisord (maybe it would be easier to just write systemd/upstart/... scripts)
-- install script
+- init scripts for systemd and init.d
 - docs
 - **tests**
 - ...
