@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"sort"
@@ -42,7 +41,7 @@ type App struct {
 
 	instances          []*Instance
 	activeInstance     *Instance
-	activeInstanceLock sync.Mutex
+	activeInstanceLock sync.RWMutex
 
 	rp       *httputil.ReverseProxy
 	portPool *PortPool
@@ -120,10 +119,10 @@ func (a *App) startInstanceUpdater() {
 
 // reserveInstance reserves active instance for an active http request
 func (a *App) reserveInstance() (*Instance, error) {
-	a.activeInstanceLock.Lock()
-	defer a.activeInstanceLock.Unlock()
-
+	a.activeInstanceLock.RLock()
 	instance := a.activeInstance
+	a.activeInstanceLock.RUnlock()
+
 	if instance == nil {
 		return nil, ErrNoActiveInstances
 	}
@@ -165,11 +164,6 @@ func (a *App) StopInstances(instanceId int, kill bool) error {
 
 func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	instance, err := a.reserveInstance()
-	defer func() {
-		if instance != nil {
-			instance.Done()
-		}
-	}()
 	if err != nil {
 		if err == ErrNoActiveInstances {
 			rw.WriteHeader(503)
@@ -185,10 +179,12 @@ func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	req.URL.Scheme = "http"
 	req.URL.Host = instance.internalHostPort
 
-	host, _, _ := net.SplitHostPort(req.RemoteAddr) //TODO parse real real ip, add fwd for
-	req.Header.Add("X-Real-IP", host)
+	// host, _, _ := net.SplitHostPort(req.RemoteAddr) //TODO parse real real ip, add fwd for
+	// req.Header.Add("X-Real-IP", host)
 
 	a.rp.ServeHTTP(rw, req)
+
+	instance.Done()
 }
 
 func (a *App) ListenAndServe() error {

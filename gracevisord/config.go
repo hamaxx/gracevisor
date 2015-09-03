@@ -39,6 +39,7 @@ const (
 	defaultLogDir      = "/var/log/gracevisor"
 	defaultMaxLogSize  = 500
 	defaultLogFileMode = os.FileMode(0600)
+	defaultLogDirMode  = os.FileMode(0744)
 )
 
 type UserConfig struct {
@@ -222,7 +223,7 @@ func (c *LoggerConfig) globalClean(g *Config) error {
 		c.MaxLogSize = defaultMaxLogSize
 	}
 
-	if err := os.MkdirAll(path.Dir(c.LogFile), defaultLogFileMode); err != nil {
+	if err := os.MkdirAll(path.Dir(c.LogFile), defaultLogDirMode); err != nil {
 		return err
 	}
 
@@ -259,10 +260,10 @@ func (c *LoggerConfig) appClean(g *Config, a *AppConfig) error {
 		c.MaxLogAge = g.Logger.MaxLogAge
 	}
 
-	if err := os.MkdirAll(path.Dir(c.StdoutLogFile), defaultLogFileMode); err != nil {
+	if err := os.MkdirAll(path.Dir(c.StdoutLogFile), defaultLogDirMode); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(path.Dir(c.StderrLogFile), defaultLogFileMode); err != nil {
+	if err := os.MkdirAll(path.Dir(c.StderrLogFile), defaultLogDirMode); err != nil {
 		return err
 	}
 
