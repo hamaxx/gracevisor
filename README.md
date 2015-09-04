@@ -144,6 +144,8 @@ Options:
 
 - **external_port**: External port for the app. Default is *8080*.
 
+- **proxy:** Type of proxy. Options are *tcp* and *http*. Default is *http*.
+
 - **stop_signal**: Signal to be used to shutdown running app. Default is *TERM*.
 
 - **max_retries**: Maximum number of retries to start the app. Default is *5*.
@@ -172,8 +174,6 @@ Options:
   - **max_logs_kept:** Maximum number of logs to be kept after log rotation. If not specified this option will be inherited from global logger config.
 
   - **max_log_age:** Maximum log age before rotating it. If not specified this option will be inherited from global logger config.
-
-  - **proxy:** Type of proxy. Options are *tcp* and *http*. Default is *http*.
 
 
 ## TODO
