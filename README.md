@@ -173,6 +173,8 @@ Options:
 
   - **max_log_age:** Maximum log age before rotating it. If not specified this option will be inherited from global logger config.
 
+  - **proxy:** Type of proxy. Options are *tcp* and *http*. Default is *http*.
+
 
 ## TODO
 
