@@ -169,8 +169,10 @@ func (a *App) ListenAndServe() error {
 	}
 
 	if a.config.Proxy == ProxyTypeTCP {
+		log.Print("Starting tcp proxy")
 		return NewTcpProxy(a).ServeTcp()
 	}
+	log.Print("Starting http proxy")
 	return http.ListenAndServe(a.externalHostPort, a.rp)
 }
 
