@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -42,8 +41,7 @@ type Instance struct {
 	status           int
 	lastChange       time.Time
 
-	connWg    *sync.WaitGroup
-	connCount int32
+	connWg *sync.WaitGroup
 
 	cmd              *exec.Cmd
 	processErr       error
@@ -158,13 +156,11 @@ func (i *Instance) Kill() {
 // Serve registers active http request
 func (i *Instance) Serve() {
 	i.connWg.Add(1)
-	atomic.AddInt32(&i.connCount, 1)
 }
 
 // Done finishes active http request
 func (i *Instance) Done() {
 	i.connWg.Done()
-	atomic.AddInt32(&i.connCount, -1)
 }
 
 func (i *Instance) healthCheck() bool {

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"sync"
 
 	"github.com/hamaxx/gracevisor/deps/cli"
@@ -36,10 +37,6 @@ func startApp(config *Config) {
 		app := NewApp(appConfig, portPool)
 		runningApps[app.config.Name] = app
 		go func() {
-			if err := app.StartNewInstance(); err != nil {
-				log.Print("Start new instance error:", err)
-				return
-			}
 			if err := app.ListenAndServe(); err != nil {
 				log.Print("App listen and serve error:", err)
 			}
@@ -59,8 +56,9 @@ func startApp(config *Config) {
 }
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU() / 2)
 	// solution for https://github.com/golang/go/issues/6785
-	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 1000
 
 	app := cli.NewApp()
 	app.Name = "gracevisord"

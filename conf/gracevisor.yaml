@@ -20,6 +20,7 @@ apps_include: ["../conf"]
 apps:
     - name: demo
       command: ../demoapp/demoapp --port={port}
+      proxy: tcp
 
     - name: demo1
       command: ../demoapp/demoapp

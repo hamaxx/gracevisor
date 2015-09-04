@@ -19,7 +19,13 @@ var (
 	ErrCommandRequired   = errors.New("Command must be specified for app")
 	ErrPortBadgeRequired = errors.New("App must have {port} in command or environment")
 	ErrInvalidStopSignal = errors.New("Invalid stop signal")
-	ErrInvalidUserId     = errors.New("invalid user id format")
+	ErrInvalidUserId     = errors.New("Invalid user id format")
+	ErrInvalidProxyType  = errors.New("Invalid proxy type (tcp/http)")
+)
+
+const (
+	ProxyTypeHTTP = "http"
+	ProxyTypeTCP  = "tcp"
 )
 
 const (
@@ -40,6 +46,8 @@ const (
 	defaultMaxLogSize  = 500
 	defaultLogFileMode = os.FileMode(0600)
 	defaultLogDirMode  = os.FileMode(0744)
+
+	defaultProxyType = ProxyTypeHTTP
 )
 
 type UserConfig struct {
@@ -106,6 +114,8 @@ type AppConfig struct {
 
 	Logger *LoggerConfig `yaml:"logger"`
 	User   *UserConfig   `yaml:"user"`
+
+	Proxy string `yaml:"proxy"`
 }
 
 func (c *AppConfig) clean(g *Config) error {
@@ -164,6 +174,13 @@ func (c *AppConfig) clean(g *Config) error {
 	}
 	if err := c.User.clean(g); err != nil {
 		return err
+	}
+
+	if c.Proxy == "" {
+		c.Proxy = ProxyTypeHTTP
+	}
+	if c.Proxy != ProxyTypeTCP && c.Proxy != ProxyTypeHTTP {
+		return ErrInvalidProxyType
 	}
 
 	return nil

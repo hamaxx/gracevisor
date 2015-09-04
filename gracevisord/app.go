@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -43,7 +42,7 @@ type App struct {
 	activeInstance     *Instance
 	activeInstanceLock sync.RWMutex
 
-	rp       *httputil.ReverseProxy
+	rp       *ReverseProxy
 	portPool *PortPool
 
 	externalHostPort string
@@ -62,7 +61,7 @@ func NewApp(config *AppConfig, portPool *PortPool) *App {
 	}
 
 	app.appLogger = NewAppLogger(app)
-	app.rp = &httputil.ReverseProxy{Director: func(req *http.Request) {}}
+	app.rp = &ReverseProxy{App: app}
 
 	app.startInstanceUpdater()
 
@@ -121,12 +120,14 @@ func (a *App) startInstanceUpdater() {
 func (a *App) reserveInstance() (*Instance, error) {
 	a.activeInstanceLock.RLock()
 	instance := a.activeInstance
-	a.activeInstanceLock.RUnlock()
 
 	if instance == nil {
+		a.activeInstanceLock.RUnlock()
 		return nil, ErrNoActiveInstances
 	}
+
 	instance.Serve()
+	a.activeInstanceLock.RUnlock()
 
 	return instance, nil
 }
@@ -162,33 +163,15 @@ func (a *App) StopInstances(instanceId int, kill bool) error {
 	return nil
 }
 
-func (a *App) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	instance, err := a.reserveInstance()
-	if err != nil {
-		if err == ErrNoActiveInstances {
-			rw.WriteHeader(503)
-			if err := req.Body.Close(); err != nil {
-				log.Print(err)
-			}
-		} else {
-			log.Print(err)
-		}
-		return
+func (a *App) ListenAndServe() error {
+	if err := a.StartNewInstance(); err != nil {
+		return err
 	}
 
-	req.URL.Scheme = "http"
-	req.URL.Host = instance.internalHostPort
-
-	// host, _, _ := net.SplitHostPort(req.RemoteAddr) //TODO parse real real ip, add fwd for
-	// req.Header.Add("X-Real-IP", host)
-
-	a.rp.ServeHTTP(rw, req)
-
-	instance.Done()
-}
-
-func (a *App) ListenAndServe() error {
-	return http.ListenAndServe(a.externalHostPort, a)
+	if a.config.Proxy == ProxyTypeTCP {
+		return NewTcpProxy(a).ServeTcp()
+	}
+	return http.ListenAndServe(a.externalHostPort, a.rp)
 }
 
 // Report returns report for rpc status commands
