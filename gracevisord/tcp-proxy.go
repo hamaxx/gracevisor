@@ -32,20 +32,34 @@ func NewTcpProxy(a *App) *TcpProxy {
 	return p
 }
 
-func (p *TcpProxy) processConn(conn *net.TCPConn) {
-	defer func() { <-p.throttle }()
+func (p *TcpProxy) processConn(lconn *net.TCPConn) {
+	defer func() {
+		lconn.Close()
+		<-p.throttle
+		//log.Printf("Num open connections: %d", len(p.throttle))
+	}()
 
 	instance, err := p.App.reserveInstance()
 	if err != nil {
 		log.Print(err)
-		conn.Close()
 		return
 	}
 
 	raddr, err := net.ResolveTCPAddr("tcp", instance.internalHostPort)
+	if err != nil {
+		log.Printf("Remote connection failed: %s", err)
+		return
+	}
+	rconn, err := net.DialTCP("tcp", nil, raddr)
+	if err != nil {
+		log.Printf("Remote connection failed: %s", err)
+		return
+	}
 
-	p.start(conn, raddr)
+	p.connHandler(lconn, rconn)
 	instance.Done()
+
+	rconn.Close()
 }
 
 func (p *TcpProxy) ServeTcp() error {
@@ -61,7 +75,6 @@ func (p *TcpProxy) ServeTcp() error {
 	for {
 		p.throttle <- struct{}{}
 		conn, err := listener.AcceptTCP()
-		conn.SetDeadline(time.Now().Add(IdleTimeout))
 
 		if err != nil {
 			log.Printf("Failed to accept connection '%s'\n", err)
@@ -71,28 +84,29 @@ func (p *TcpProxy) ServeTcp() error {
 	}
 }
 
-func (p *TcpProxy) start(lconn *net.TCPConn, raddr *net.TCPAddr) {
-	defer lconn.Close()
+func (p *TcpProxy) connHandler(lconn, rconn *net.TCPConn) {
+	dl := time.Now().Add(IdleTimeout)
 
-	rconn, err := net.DialTCP("tcp", nil, raddr)
-	rconn.SetDeadline(time.Now().Add(IdleTimeout))
-	defer rconn.Close()
+	rconn.SetDeadline(dl)
+	lconn.SetDeadline(dl)
 
-	if err != nil {
-		log.Printf("Remote connection failed: %s", err)
-		return
+	doneLocal := make(chan bool)
+	doneRemote := make(chan bool)
+
+	go p.connCopy(rconn, lconn, dl, doneLocal)
+	go p.connCopy(lconn, rconn, dl, doneRemote)
+
+	for i := 0; i < 2; i++ {
+		select {
+		case <-doneLocal:
+			rconn.CloseRead()
+		case <-doneRemote:
+			lconn.CloseRead()
+		}
 	}
-
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-
-	go p.connCopy(1, rconn, lconn, wg)
-	go p.connCopy(2, lconn, rconn, wg)
-
-	wg.Wait()
 }
 
-func (p *TcpProxy) connCopy(t int, dst, src *net.TCPConn, wg *sync.WaitGroup) {
+func (p *TcpProxy) connCopy(dst, src *net.TCPConn, dl time.Time, done chan bool) {
 	buf := bufferPool.Get().([]byte)
 
 	for {
@@ -116,14 +130,14 @@ func (p *TcpProxy) connCopy(t int, dst, src *net.TCPConn, wg *sync.WaitGroup) {
 			break
 		}
 
-		if nr > 0 {
-			dst.SetDeadline(time.Now().Add(IdleTimeout))
-			src.SetDeadline(time.Now().Add(IdleTimeout))
+		dlNew := time.Now().Add(IdleTimeout)
+		if nr > 0 && dlNew.Sub(dl) > time.Second {
+			dl = dlNew
+			dst.SetDeadline(dl)
+			src.SetDeadline(dl)
 		}
 	}
-	src.CloseRead()
-	dst.CloseWrite()
 
-	bufferPool.Put(buf[:])
-	wg.Done()
+	bufferPool.Put(buf)
+	done <- true
 }
